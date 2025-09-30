@@ -2,9 +2,10 @@ import React from 'react';
 
 interface TicketFormProps {
   onSubmitSuccess: () => void;
+  selectedTier: { title: string; price: string } | null;
 }
 
-const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess }) => {
+const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle ticket request logic here
@@ -13,7 +14,10 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess }) => {
 
   return (
     <div>
-      <h2 className="font-serif-display text-3xl text-white text-center mb-2">Request an Invitation</h2>
+      <h2 className="font-serif-display text-3xl text-white text-center mb-2">
+        Request an Invitation
+        {selectedTier && <span className="block text-xl text-gray-400 mt-1 font-normal">{selectedTier.title}</span>}
+      </h2>
       <p className="text-center text-gray-400 mb-6 text-sm">
         Please note: Completing your request and payment is an application. It does not guarantee entry. Final confirmation is granted only by The Circle. Unsuccessful applications will be fully refunded.
       </p>

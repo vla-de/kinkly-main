@@ -2,10 +2,10 @@ import React from 'react';
 import PricingTier from './PricingTier';
 
 interface MembershipSectionProps {
-  onTicketClick: () => void;
+  onTierSelect: (tier: { title: string; price: string; }) => void;
 }
 
-const MembershipSection: React.FC<MembershipSectionProps> = ({ onTicketClick }) => {
+const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) => {
   return (
     <section id="membership" className="py-20 md:py-32 bg-black">
       <div className="container mx-auto px-6">
@@ -26,7 +26,7 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTicketClick }) 
               'Full access to all curated performances',
               'Inclusion in the pre-event communication',
             ]}
-            onSelect={onTicketClick}
+            onSelect={() => onTierSelect({ title: 'The Invitation', price: '€950' })}
             ctaText="Request Access"
           />
           <PricingTier 
@@ -41,7 +41,7 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTicketClick }) 
               'An exclusive, curated welcome gift',
             ]}
             isFeatured={true}
-            onSelect={onTicketClick}
+            onSelect={() => onTierSelect({ title: 'The Black Card', price: '€2.500' })}
             ctaText="Become a Member"
           />
           <PricingTier 
@@ -55,7 +55,7 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTicketClick }) 
               'Curated selection of vintage spirits & private dining',
               'Direct line to the curator for bespoke requests',
             ]}
-            onSelect={onTicketClick}
+            onSelect={() => onTierSelect({ title: 'The Sovereign', price: '€10.000' })}
             ctaText="Inquire"
           />
         </div>

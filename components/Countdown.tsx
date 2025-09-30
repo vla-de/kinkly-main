@@ -73,7 +73,8 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
   }, [timeLeft]);
 
 
-  const timerComponents: JSX.Element[] = [];
+  // FIX: Use React.ReactElement to resolve "Cannot find namespace 'JSX'" error.
+  const timerComponents: React.ReactElement[] = [];
 
   Object.keys(displayTimeLeft).forEach((interval) => {
     timerComponents.push(

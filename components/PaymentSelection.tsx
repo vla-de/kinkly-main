@@ -1,49 +1,210 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
+import { PayPalScriptProvider, PayPalButtons, OnApproveData, CreateOrderData } from '@paypal/react-paypal-js';
 
-const StripeIcon = () => (
-  <svg width="48" height="20" viewBox="0 0 48 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-    <path d="M40.33 4.129c-.283-.05-.591-.077-.92-.077-1.442 0-2.585.59-3.43 1.772-.845 1.181-1.267 2.71-1.267 4.587 0 1.62.373 2.91 1.12 3.87.747.96 1.796 1.44 3.149 1.44.527 0 .99-.05 1.39-.15v-2.22c-.373.227-.796.34-1.267.34-.698 0-1.218-.283-1.56-.85-.342-.565-.513-1.39-.513-2.477h4.63v-.85c0-1.747-.318-3.12-1.006-4.13-.64-1.006-1.535-1.51-2.678-1.51zm-1.218 5.48c.025-.934.227-1.646.605-2.136.377-.49.88-.735 1.506-.735.698 0 1.218.245 1.56.735.342.49.513 1.202.513 2.136h-4.184zM27.098 15.77V4.33h2.344v1.673c.422-1.258 1.417-1.887 2.986-1.887.697 0 1.317.123 1.86.37V6.9c-.473-.202-1.023-.303-1.65-.303-1.047 0-1.84.4-2.378 1.197-.538.796-.807 1.95-.807 3.46v4.516h-2.355zm-10.155.123c-1.34 0-2.45-.448-3.33-1.343C12.722 13.65 12.28 12.4 12.28 10.8c0-1.6.442-2.85 1.328-3.75.886-.9 1.99-1.35 3.31-1.35 1.344 0 2.454.45 3.33 1.35.875.9 1.312 2.15 1.312 3.75 0 1.6-.437 2.85-1.312 3.75-.875.9-1.986 1.35-3.33 1.35zm0-2.22c.747 0 1.332-.284 1.754-.85.422-.566.633-1.418.633-2.557 0-1.14-.21-1.99-.633-2.556-.422-.566-1.007-.85-1.754-.85-.747 0-1.332.284-1.754.85-.422.565-.633 1.417-.633 2.556 0 1.14.21 1.99.633 2.557.422.566 1.007.85 1.754.85zM9.904 15.77V.13h-2.43L4.234 9.14c-.1.202-.176.478-.227.828H4c.05-.35.075-.626.075-.828L.886.13H0v15.64h2.24V4.71c0-.527.025-.977.075-1.35h.025c.075.4.175.8.298 1.2L6.1 15.77h1.4l3.4-11.21c.125-.4.225-.8.3-1.2h.05c.05.373.075.823.075 1.35v11.06h-2.24z" fill="#635BFF"/></svg>
-);
 
-const PayPalIcon = () => (
-    <svg width="20" height="24" viewBox="0 0 20 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
-      <path d="M4.21 23.335L0 1.415h5.18l.81 5.95c.1.78.2 1.57.28 2.36h.05c.23-1.04.88-2.07 1.96-3.11C9.6 5.425 10.98 4.755 12.7 4.755c3.2 0 5.4 1.7 6.6 4.96.94 2.57 1.01 5.3 1.01 8.18v.13h-4.49v-.32c0-2.35-.07-4.5-1.01-6.43-1.1-2.29-3.05-3.44-5.85-3.44-1.44 0-2.5.42-3.18 1.25-.68.83-.96 1.96-.86 3.39.07 1.11.4 2.19.98 3.23l2.25 3.99H4.21z" fill="#253B80"/>
-      <path d="M10.95.125L8.24 2.055c3.55 1.55 5.57 3.95 6.04 7.2h4.48c-.4-4.82-2.88-8.1-8.81-9.13z" fill="#179BD7"/>
-    </svg>
-);
+// **WICHTIG**: Ersetzen Sie dies durch Ihren PUBLISHABLE Stripe Key.
+const stripePromise = loadStripe('pk_test_YOUR_PUBLISHABLE_KEY');
+
+const CARD_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      color: "#E0E0E0",
+      fontFamily: '"Inter", sans-serif',
+      fontSmoothing: "antialiased",
+      fontSize: "16px",
+      "::placeholder": {
+        color: "#6b7280",
+      },
+    },
+    invalid: {
+      color: "#ef4444",
+      iconColor: "#ef4444",
+    },
+  },
+};
+
+
+interface CheckoutFormProps {
+  onPaymentSuccess: () => void;
+  selectedTier: { title: string; price: string } | null;
+}
+
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedTier }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setProcessing(true);
+    setError(null);
+
+    if (!stripe || !elements) {
+      setError("Stripe.js has not loaded. Please wait a moment and try again.");
+      setProcessing(false);
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+        setError("Card element not found.");
+        setProcessing(false);
+        return;
+    }
+    
+    const response = await fetch('http://localhost:4242/api/create-payment-intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price: selectedTier?.price })
+    });
+
+    if (!response.ok) {
+      const { error } = await response.json();
+      setError(error || 'Failed to create payment intent.');
+      setProcessing(false);
+      return;
+    }
+
+    const { clientSecret } = await response.json();
+    
+    if (!clientSecret) {
+      setError('Could not retrieve payment information from server.');
+      setProcessing(false);
+      return;
+    }
+
+    const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardElement,
+        billing_details: {
+          name: 'Kinkly Guest', // You can collect this from a form field
+        },
+      },
+    });
+
+    if (stripeError) {
+      setError(stripeError.message ?? "An unknown error occurred.");
+      setProcessing(false);
+      return;
+    }
+
+    if (paymentIntent?.status === 'succeeded') {
+      onPaymentSuccess();
+    } else {
+        setError(`Payment status: ${paymentIntent?.status}`);
+    }
+    
+    setProcessing(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+       <div className="p-3 bg-gray-800 border border-gray-700 rounded-md mb-6">
+         <CardElement options={CARD_ELEMENT_OPTIONS} />
+       </div>
+       {error && <div className="text-red-500 text-xs text-center mb-4">{error}</div>}
+      <button 
+        type="submit" 
+        disabled={!stripe || processing}
+        className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed"
+      >
+        {processing ? 'Processing...' : `Pay ${selectedTier?.price}`}
+      </button>
+    </form>
+  );
+};
 
 
 interface PaymentSelectionProps {
   onPaymentSuccess: () => void;
+  selectedTier: { title: string; price: string } | null;
 }
 
-const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess }) => {
-  const handlePayment = (provider: string) => {
-    // In a real app, this would trigger the payment flow.
-    // For this simulation, we'll just proceed to the success state.
-    console.log(`Simulating payment with ${provider}...`);
-    onPaymentSuccess();
+// **WICHTIG**: Ersetzen Sie dies durch Ihre PayPal Client ID.
+const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_SANDBOX_CLIENT_ID";
+
+const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, selectedTier }) => {
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const createPayPalOrder = async (data: CreateOrderData): Promise<string> => {
+    setPaymentError(null);
+    try {
+      const response = await fetch('http://localhost:4242/api/paypal/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: selectedTier?.price }),
+      });
+      const orderData = await response.json();
+      if (!response.ok || !orderData.orderID) {
+        throw new Error(orderData.error || 'Could not create PayPal order.');
+      }
+      return orderData.orderID;
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : 'An unexpected error occurred with PayPal.');
+      return '';
+    }
   };
 
+  const onPayPalApprove = async (data: OnApproveData): Promise<void> => {
+    try {
+      const response = await fetch('http://localhost:4242/api/paypal/capture-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderID: data.orderID }),
+      });
+      if (!response.ok) {
+         const errorData = await response.json();
+        throw new Error(errorData.error || 'Could not capture PayPal payment.');
+      }
+      onPaymentSuccess();
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : 'An error occurred while finalizing your payment.');
+    }
+  };
+
+
   return (
-    <div>
-      <h2 className="font-serif-display text-3xl text-white text-center mb-6">Complete Your Reservation</h2>
-      <p className="text-center text-gray-400 mb-8 text-sm">Please select a payment method to secure your place.</p>
-      <div className="space-y-4">
-        <button 
-          onClick={() => handlePayment('Stripe')}
-          className="w-full flex items-center justify-center bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider rounded-md">
-          <StripeIcon />
-          <span>Pay with Stripe</span>
-        </button>
-        <button 
-          onClick={() => handlePayment('PayPal')}
-          className="w-full flex items-center justify-center bg-[#003087] text-white py-3 px-4 hover:bg-[#00296b] transition-colors duration-300 font-semibold tracking-wider rounded-md">
-          <PayPalIcon />
-          <span>Pay with PayPal</span>
-        </button>
+    <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID, currency: "EUR", "disable-funding": "card" }}>
+      <div>
+        <h2 className="font-serif-display text-3xl text-white text-center mb-2">Complete Your Reservation</h2>
+        
+        {selectedTier && (
+          <div className="text-center my-6">
+            <p className="text-lg text-gray-400">{selectedTier.title}</p>
+            <p className="text-5xl font-serif-display text-white mt-2">{selectedTier.price}</p>
+          </div>
+        )}
+        
+        <p className="text-center text-gray-400 mb-8 text-sm">Please enter your payment details to secure your place.</p>
+        
+        <Elements stripe={stripePromise}>
+          <CheckoutForm onPaymentSuccess={onPaymentSuccess} selectedTier={selectedTier} />
+        </Elements>
+        
+        <div className="relative flex py-5 items-center">
+            <div className="flex-grow border-t border-gray-700"></div>
+            <span className="flex-shrink mx-4 text-gray-500 text-xs">OR</span>
+            <div className="flex-grow border-t border-gray-700"></div>
+        </div>
+        
+        {paymentError && <div className="text-red-500 text-xs text-center mb-4">{paymentError}</div>}
+
+        <PayPalButtons 
+          style={{ layout: 'horizontal', color: 'white', shape: 'rect', label: 'paypal', tagline: false }}
+          createOrder={createPayPalOrder}
+          onApprove={onPayPalApprove}
+          onError={(err) => setPaymentError(err.toString())}
+        />
       </div>
-    </div>
+    </PayPalScriptProvider>
   );
 };
 

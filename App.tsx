@@ -14,10 +14,21 @@ import SuccessAnimation from './components/SuccessAnimation';
 
 const App: React.FC = () => {
   const [activeModal, setActiveModal] = useState<null | 'login' | 'referral' | 'ticket' | 'payment' | 'success'>(null);
+  const [selectedTier, setSelectedTier] = useState<{ title: string; price: string } | null>(null);
 
   const handleOpenLogin = () => setActiveModal('login');
-  const handleOpenReferral = () => setActiveModal('referral');
   const handleCloseModal = () => setActiveModal(null);
+
+  const handleTierSelect = (tier: { title: string; price: string }) => {
+    setSelectedTier(tier);
+    setActiveModal('referral');
+  };
+  
+  const handleOpenReferral = () => {
+    // Default to the basic invitation if no specific tier is chosen
+    setSelectedTier({ title: 'The Invitation', price: '€950' });
+    setActiveModal('referral');
+  };
 
   const handleReferralSuccess = () => {
     setActiveModal('ticket');
@@ -38,7 +49,7 @@ const App: React.FC = () => {
       <main>
         <HeroSection onTicketClick={handleOpenReferral} />
         <ExperienceSection />
-        <MembershipSection onTicketClick={handleOpenReferral} />
+        <MembershipSection onTierSelect={handleTierSelect} />
         <NextEventSection onTicketClick={handleOpenReferral} />
       </main>
       <Footer />
@@ -52,11 +63,11 @@ const App: React.FC = () => {
       </Modal>
 
       <Modal isOpen={activeModal === 'ticket'} onClose={handleCloseModal}>
-        <TicketForm onSubmitSuccess={handleTicketSubmitSuccess} />
+        <TicketForm onSubmitSuccess={handleTicketSubmitSuccess} selectedTier={selectedTier} />
       </Modal>
       
       <Modal isOpen={activeModal === 'payment'} onClose={handleCloseModal}>
-        <PaymentSelection onPaymentSuccess={handlePaymentSuccess} />
+        <PaymentSelection onPaymentSuccess={handlePaymentSuccess} selectedTier={selectedTier} />
       </Modal>
 
       <Modal isOpen={activeModal === 'success'} onClose={handleCloseModal}>

@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "@stripe/stripe-js": "latest",
+    "@stripe/react-stripe-js": "latest",
+    "@paypal/react-paypal-js": "latest"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
