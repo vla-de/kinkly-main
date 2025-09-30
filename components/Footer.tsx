@@ -1,5 +1,10 @@
-
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+
+interface FooterProps {
+  onImpressumClick: () => void;
+  onDatenschutzClick: () => void;
+}
 
 const InstagramIcon: React.FC = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
@@ -10,7 +15,8 @@ const InstagramIcon: React.FC = () => (
 );
 
 
-const Footer: React.FC = () => {
+const Footer: React.FC<FooterProps> = ({ onImpressumClick, onDatenschutzClick }) => {
+  const { t } = useLanguage();
   return (
     <footer className="bg-black py-8">
       <div className="container mx-auto px-6 flex flex-col sm:flex-row justify-between items-center text-center">
@@ -23,7 +29,9 @@ const Footer: React.FC = () => {
           </a>
         </div>
         <div className="text-xs text-gray-700">
-          <a href="#" className="hover:text-gray-400">Impressum</a> | <a href="#" className="hover:text-gray-400">Datenschutz</a>
+          <button onClick={onImpressumClick} className="hover:text-gray-400 underline">{t.footer_impressum}</button>
+          <span className="mx-2">|</span>
+          <button onClick={onDatenschutzClick} className="hover:text-gray-400 underline">{t.footer_datenschutz}</button>
         </div>
       </div>
     </footer>

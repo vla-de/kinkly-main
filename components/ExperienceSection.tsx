@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const ExperienceCard: React.FC<{ imageUrl: string; title: string; description: string }> = ({ imageUrl, title, description }) => (
   <div className="group relative overflow-hidden">
@@ -11,30 +12,31 @@ const ExperienceCard: React.FC<{ imageUrl: string; title: string; description: s
 );
 
 const ExperienceSection: React.FC = () => {
+  const { t } = useLanguage();
   return (
     <section className="py-20 md:py-32 bg-black">
       <div className="container mx-auto px-6">
         <div className="text-center mb-12 md:mb-16">
-          <h2 className="font-serif-display text-4xl md:text-5xl text-white mb-4">The Experience</h2>
+          <h2 className="font-serif-display text-4xl md:text-5xl text-white mb-4">{t.experience_title}</h2>
           <p className="max-w-3xl mx-auto text-gray-400">
-            Every detail is meticulously curated to transport you to a world of dark elegance and unrestrained desire. From free-flowing champagne to epicurean delights, expect nothing less than perfection.
+            {t.experience_paragraph}
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <ExperienceCard 
             imageUrl="/ambiance.jpg" 
-            title="Mysterious Ambiance" 
-            description="Lose yourself in a setting shrouded in mystery, where candlelight flickers and secrets linger in the air." 
+            title={t.experience_card_1_title} 
+            description={t.experience_card_1_desc} 
           />
           <ExperienceCard 
             imageUrl="https://picsum.photos/800/600?random=2" 
-            title="Exquisite Performances" 
-            description="Witness captivating performances that blur the line between art and fantasy, designed to ignite your senses." 
+            title={t.experience_card_2_title} 
+            description={t.experience_card_2_desc} 
           />
           <ExperienceCard 
             imageUrl="https://picsum.photos/800/600?random=3" 
-            title="Curated Connections" 
-            description="Mingle with a select group of individuals who, like you, appreciate the finer, darker things in life." 
+            title={t.experience_card_3_title} 
+            description={t.experience_card_3_desc} 
           />
         </div>
       </div>

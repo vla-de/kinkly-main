@@ -1,16 +1,34 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface HeaderProps {
   onLoginClick: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
+  const { language, setLanguage, t } = useLanguage();
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'de' : 'en');
+  };
+
   return (
-    <header className="absolute top-0 right-0 p-6 md:p-8 z-50">
-      <button onClick={onLoginClick} className="font-serif-display text-4xl md:text-5xl text-gray-400 hover:text-white transition-colors duration-300" title="Member Login">
-        K
-      </button>
-    </header>
+    <>
+      <header className="absolute top-0 left-0 p-6 md:p-8 z-50">
+        <button 
+          onClick={toggleLanguage} 
+          className="font-sans text-sm font-medium text-gray-500 hover:text-white transition-colors duration-300"
+          aria-label="Change language"
+        >
+          {language === 'en' ? 'DE' : 'EN'}
+        </button>
+      </header>
+      <header className="absolute top-0 right-0 p-6 md:p-8 z-50">
+        <button onClick={onLoginClick} className="font-serif-display text-4xl md:text-5xl text-gray-400 hover:text-white transition-colors duration-300" title={t.header_login_tooltip}>
+          K
+        </button>
+      </header>
+    </>
   );
 };
 

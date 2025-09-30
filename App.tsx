@@ -11,10 +11,13 @@ import TicketForm from './components/TicketForm';
 import ReferralCodeForm from './components/ReferralCodeForm';
 import PaymentSelection from './components/PaymentSelection';
 import SuccessAnimation from './components/SuccessAnimation';
+import Impressum from './components/Impressum';
+import Datenschutz from './components/Datenschutz';
 
 const App: React.FC = () => {
-  const [activeModal, setActiveModal] = useState<null | 'login' | 'referral' | 'ticket' | 'payment' | 'success'>(null);
+  const [activeModal, setActiveModal] = useState<null | 'login' | 'referral' | 'ticket' | 'payment' | 'success' | 'impressum' | 'datenschutz'>(null);
   const [selectedTier, setSelectedTier] = useState<{ title: string; price: string } | null>(null);
+  const [applicationId, setApplicationId] = useState<string | null>(null);
 
   const handleOpenLogin = () => setActiveModal('login');
   const handleCloseModal = () => setActiveModal(null);
@@ -34,13 +37,17 @@ const App: React.FC = () => {
     setActiveModal('ticket');
   };
   
-  const handleTicketSubmitSuccess = () => {
+  const handleTicketSubmitSuccess = (newApplicationId: string) => {
+    setApplicationId(newApplicationId);
     setActiveModal('payment');
   };
 
   const handlePaymentSuccess = () => {
     setActiveModal('success');
   };
+
+  const handleOpenImpressum = () => setActiveModal('impressum');
+  const handleOpenDatenschutz = () => setActiveModal('datenschutz');
 
 
   return (
@@ -52,7 +59,7 @@ const App: React.FC = () => {
         <MembershipSection onTierSelect={handleTierSelect} />
         <NextEventSection onTicketClick={handleOpenReferral} />
       </main>
-      <Footer />
+      <Footer onImpressumClick={handleOpenImpressum} onDatenschutzClick={handleOpenDatenschutz} />
 
       <Modal isOpen={activeModal === 'login'} onClose={handleCloseModal}>
         <LoginForm />
@@ -67,11 +74,23 @@ const App: React.FC = () => {
       </Modal>
       
       <Modal isOpen={activeModal === 'payment'} onClose={handleCloseModal}>
-        <PaymentSelection onPaymentSuccess={handlePaymentSuccess} selectedTier={selectedTier} />
+        <PaymentSelection 
+          onPaymentSuccess={handlePaymentSuccess} 
+          selectedTier={selectedTier}
+          applicationId={applicationId} 
+        />
       </Modal>
 
       <Modal isOpen={activeModal === 'success'} onClose={handleCloseModal}>
         <SuccessAnimation />
+      </Modal>
+      
+      <Modal isOpen={activeModal === 'impressum'} onClose={handleCloseModal}>
+        <Impressum />
+      </Modal>
+
+      <Modal isOpen={activeModal === 'datenschutz'} onClose={handleCloseModal}>
+        <Datenschutz />
       </Modal>
     </div>
   );

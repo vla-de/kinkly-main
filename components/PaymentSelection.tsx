@@ -6,17 +6,12 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
-// FIX: OnApproveData and CreateOrderData are not exported from this package.
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
+import { useLanguage } from '../contexts/LanguageContext';
 
-
-// **WICHTIG**: Ersetzen Sie dies durch Ihren PUBLISHABLE Stripe Key.
 const stripePromise = loadStripe('pk_test_D0yGFsSbMLDTGbr3nhQshR7400Xrp59x45');
+const API_BASE_URL = 'https://kinkly-backend.onrender.com';
 
-// **WICHTIG**: Ersetzen Sie dies mit der öffentlichen URL Ihres Backends auf Render.
-const API_BASE_URL = 'https://kinkly-backend.onrender.com/';
-
-// FIX: Define missing types for PayPal callbacks locally.
 interface OnApproveData {
   orderID: string;
 }
@@ -45,16 +40,22 @@ const CARD_ELEMENT_OPTIONS = {
 interface CheckoutFormProps {
   onPaymentSuccess: () => void;
   selectedTier: { title: string; price: string } | null;
+  applicationId: string | null;
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedTier }) => {
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedTier, applicationId }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const { t } = useLanguage();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!applicationId) {
+      setError("Application ID is missing. Please go back and fill out the form.");
+      return;
+    }
     setProcessing(true);
     setError(null);
 
@@ -74,7 +75,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedT
     const response = await fetch(`${API_BASE_URL}/api/create-payment-intent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ price: selectedTier?.price })
+      body: JSON.stringify({ price: selectedTier?.price, applicationId })
     });
 
     if (!response.ok) {
@@ -95,9 +96,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedT
     const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
       payment_method: {
         card: cardElement,
-        billing_details: {
-          name: 'Kinkly Guest', // You can collect this from a form field
-        },
       },
     });
 
@@ -108,6 +106,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedT
     }
 
     if (paymentIntent?.status === 'succeeded') {
+      // The backend will handle saving to DB via webhook
       onPaymentSuccess();
     } else {
         setError(`Payment status: ${paymentIntent?.status}`);
@@ -124,10 +123,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedT
        {error && <div className="text-red-500 text-xs text-center mb-4">{error}</div>}
       <button 
         type="submit" 
-        disabled={!stripe || processing}
+        disabled={!stripe || processing || !applicationId}
         className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed"
       >
-        {processing ? 'Processing...' : `Pay ${selectedTier?.price}`}
+        {processing ? t.payment_processing : `${t.payment_button} ${selectedTier?.price}`}
       </button>
     </form>
   );
@@ -137,15 +136,20 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedT
 interface PaymentSelectionProps {
   onPaymentSuccess: () => void;
   selectedTier: { title: string; price: string } | null;
+  applicationId: string | null;
 }
 
-// **WICHTIG**: Ersetzen Sie dies durch Ihre PayPal Client ID.
-const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_SANDBOX_CLIENT_ID";
+const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_SANDBOX_CLIENT_ID"; // Replace with your actual ID
 
-const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, selectedTier }) => {
+const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, selectedTier, applicationId }) => {
+  const { t } = useLanguage();
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
-  const createPayPalOrder = async (data: CreateOrderData): Promise<string> => {
+  const createPayPalOrder = async (data: CreateOrderData, actions: any): Promise<string> => {
+    if (!applicationId) {
+      setPaymentError("Application ID is missing. Please go back and fill out the form.");
+      return Promise.reject(new Error("Missing application ID"));
+    }
     setPaymentError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/paypal/create-order`, {
@@ -159,17 +163,22 @@ const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, s
       }
       return orderData.orderID;
     } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : 'An unexpected error occurred with PayPal.');
-      return '';
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred with PayPal.';
+      setPaymentError(message);
+      return Promise.reject(new Error(message));
     }
   };
 
-  const onPayPalApprove = async (data: OnApproveData): Promise<void> => {
+  const onPayPalApprove = async (data: OnApproveData, actions: any): Promise<void> => {
+    if (!applicationId) {
+      setPaymentError("Application ID is missing and cannot capture payment.");
+      return;
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/api/paypal/capture-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderID: data.orderID }),
+        body: JSON.stringify({ orderID: data.orderID, applicationId }),
       });
       if (!response.ok) {
          const errorData = await response.json();
@@ -185,7 +194,7 @@ const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, s
   return (
     <PayPalScriptProvider options={{ clientId: PAYPAL_CLIENT_ID, currency: "EUR", "disable-funding": "card" }}>
       <div>
-        <h2 className="font-serif-display text-3xl text-white text-center mb-2">Complete Your Reservation</h2>
+        <h2 className="font-serif-display text-3xl text-white text-center mb-2">{t.payment_title}</h2>
         
         {selectedTier && (
           <div className="text-center my-6">
@@ -194,25 +203,32 @@ const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, s
           </div>
         )}
         
-        <p className="text-center text-gray-400 mb-8 text-sm">Please enter your payment details to secure your place.</p>
+        <p className="text-center text-gray-400 mb-8 text-sm">{t.payment_paragraph}</p>
         
         <Elements stripe={stripePromise}>
-          <CheckoutForm onPaymentSuccess={onPaymentSuccess} selectedTier={selectedTier} />
+          <CheckoutForm 
+            onPaymentSuccess={onPaymentSuccess} 
+            selectedTier={selectedTier}
+            applicationId={applicationId}
+          />
         </Elements>
         
         <div className="relative flex py-5 items-center">
             <div className="flex-grow border-t border-gray-700"></div>
-            <span className="flex-shrink mx-4 text-gray-500 text-xs">OR</span>
+            <span className="flex-shrink mx-4 text-gray-500 text-xs">{t.payment_or_divider}</span>
             <div className="flex-grow border-t border-gray-700"></div>
         </div>
         
         {paymentError && <div className="text-red-500 text-xs text-center mb-4">{paymentError}</div>}
+        
+        {!applicationId && <div className="text-yellow-400 text-xs text-center mb-4">{t.payment_paypal_error}</div>}
 
         <PayPalButtons 
           style={{ layout: 'horizontal', color: 'white', shape: 'rect', label: 'paypal', tagline: false }}
           createOrder={createPayPalOrder}
           onApprove={onPayPalApprove}
           onError={(err) => setPaymentError(err.toString())}
+          disabled={!applicationId}
         />
       </div>
     </PayPalScriptProvider>

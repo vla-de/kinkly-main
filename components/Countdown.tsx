@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CountdownProps {
   targetDate: string;
@@ -11,6 +12,8 @@ interface TimeLeft {
 }
 
 const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
+  const { t } = useLanguage();
+
   const calculateTimeLeft = (): TimeLeft | {} => {
     const difference = +new Date(targetDate) - +new Date();
     let timeLeft: TimeLeft | {} = {};
@@ -72,8 +75,12 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
     return () => clearTimeout(glitchTimeout);
   }, [timeLeft]);
 
+  const timeIntervals: { [key in keyof TimeLeft]: string } = {
+    days: t.countdown_days,
+    hours: t.countdown_hours,
+    minutes: t.countdown_minutes,
+  };
 
-  // FIX: Use React.ReactElement to resolve "Cannot find namespace 'JSX'" error.
   const timerComponents: React.ReactElement[] = [];
 
   Object.keys(displayTimeLeft).forEach((interval) => {
@@ -82,14 +89,14 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
         <div className="text-3xl md:text-5xl font-bold text-white tabular-nums">
           {String(displayTimeLeft[interval as keyof TimeLeft]).padStart(2, '0')}
         </div>
-        <div className="text-sm text-gray-400 tracking-wider uppercase">{interval}</div>
+        <div className="text-sm text-gray-400 tracking-wider uppercase">{timeIntervals[interval as keyof TimeLeft]}</div>
       </div>
     );
   });
 
   return (
     <div className="flex gap-4 md:gap-8">
-      {timerComponents.length ? timerComponents : <span>Event has started.</span>}
+      {timerComponents.length ? timerComponents : <span>{t.countdown_event_started}</span>}
       <style>{`.tabular-nums { font-variant-numeric: tabular-nums; }`}</style>
     </div>
   );

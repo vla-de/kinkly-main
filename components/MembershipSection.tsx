@@ -1,62 +1,48 @@
 import React from 'react';
 import PricingTier from './PricingTier';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface MembershipSectionProps {
   onTierSelect: (tier: { title: string; price: string; }) => void;
 }
 
 const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) => {
+  const { t } = useLanguage();
+
   return (
     <section id="membership" className="py-20 md:py-32 bg-black">
       <div className="container mx-auto px-6">
         <div className="text-center mb-12 md:mb-16">
-          <h2 className="font-serif-display text-4xl md:text-5xl text-white mb-4">Choose Your Experience</h2>
+          <h2 className="font-serif-display text-4xl md:text-5xl text-white mb-4">{t.membership_title}</h2>
           <p className="max-w-3xl mx-auto text-gray-400">
-            Entry is not merely bought; it is granted. Note that opulence is our standard; champagne and caviar are but the beginning for all our guests.
+            {t.membership_paragraph}
           </p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
           <PricingTier 
-            title="The Invitation"
+            title={t.tier1_title}
             price="€950"
-            description="The key to a single, unforgettable night."
-            features={[
-              'Guaranteed access to one Kinkly event',
-              'Welcome champagne & caviar bar',
-              'Full access to all curated performances',
-              'Inclusion in the pre-event communication',
-            ]}
-            onSelect={() => onTierSelect({ title: 'The Invitation', price: '€950' })}
-            ctaText="Request Access"
+            description={t.tier1_desc}
+            features={t.tier1_features}
+            onSelect={() => onTierSelect({ title: t.tier1_title, price: '€950' })}
+            ctaText={t.tier1_cta}
           />
           <PricingTier 
-            title="The Black Card"
+            title={t.tier2_title}
             price="€2.500"
-            description="The preferred experience for our connoisseurs."
-            features={[
-              'All benefits of The Invitation',
-              'Priority access with a separate entrance',
-              'Exclusive access to the private Black Lounge',
-              'A dedicated concierge for the evening',
-              'An exclusive, curated welcome gift',
-            ]}
+            description={t.tier2_desc}
+            features={t.tier2_features}
             isFeatured={true}
-            onSelect={() => onTierSelect({ title: 'The Black Card', price: '€2.500' })}
-            ctaText="Become a Member"
+            onSelect={() => onTierSelect({ title: t.tier2_title, price: '€2.500' })}
+            ctaText={t.tier2_cta}
           />
           <PricingTier 
-            title="The Sovereign"
+            title={t.tier3_title}
             price="€10.000"
-            description="The pinnacle of Kinkly for a single, unparalleled night."
-            features={[
-              'All benefits of The Black Card',
-              'An exclusive, private suite for you and a guest',
-              'Personal butler service for the entire event',
-              'Curated selection of vintage spirits & private dining',
-              'Direct line to the curator for bespoke requests',
-            ]}
-            onSelect={() => onTierSelect({ title: 'The Sovereign', price: '€10.000' })}
-            ctaText="Inquire"
+            description={t.tier3_desc}
+            features={t.tier3_features}
+            onSelect={() => onTierSelect({ title: t.tier3_title, price: '€10.000' })}
+            ctaText={t.tier3_cta}
           />
         </div>
       </div>

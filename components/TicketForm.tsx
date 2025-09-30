@@ -1,29 +1,65 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface TicketFormProps {
-  onSubmitSuccess: () => void;
+  onSubmitSuccess: (applicationId: string) => void;
   selectedTier: { title: string; price: string } | null;
 }
 
 const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }) => {
-  const handleSubmit = (e: React.FormEvent) => {
+  const { t } = useLanguage();
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const API_BASE_URL = 'https://kinkly-backend.onrender.com';
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Handle ticket request logic here
-    onSubmitSuccess();
+    setIsSubmitting(true);
+    setError('');
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      fullName: formData.get('name') as string,
+      email: formData.get('email') as string,
+      message: formData.get('message') as string,
+      tier: selectedTier?.title || 'Unknown',
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/applications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit application.');
+      }
+
+      const result = await response.json();
+      onSubmitSuccess(result.applicationId);
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div>
       <h2 className="font-serif-display text-3xl text-white text-center mb-2">
-        Request an Invitation
+        {t.ticket_title}
         {selectedTier && <span className="block text-xl text-gray-400 mt-1 font-normal">{selectedTier.title}</span>}
       </h2>
       <p className="text-center text-gray-400 mb-6 text-sm">
-        Please note: Completing your request and payment is an application. It does not guarantee entry. Final confirmation is granted only by The Circle. Unsuccessful applications will be fully refunded.
+        {t.ticket_paragraph}
       </p>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-400">Full Name</label>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-400">{t.ticket_name_label}</label>
           <input
             type="text"
             id="name"
@@ -33,8 +69,7 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
           />
         </div>
         <div>
-          {/* FIX: Corrected closing tag typo from </desciption> to </label> */}
-          <label htmlFor="request-email" className="block text-sm font-medium text-gray-400">Email</label>
+          <label htmlFor="request-email" className="block text-sm font-medium text-gray-400">{t.ticket_email_label}</label>
           <input
             type="email"
             id="request-email"
@@ -45,7 +80,7 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
         </div>
         <div>
           <label htmlFor="message" className="block text-sm font-medium text-gray-400">
-            Tell us why you wish to attend (Optional)
+            {t.ticket_message_label}
           </label>
           <textarea
             id="message"
@@ -54,9 +89,14 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
             className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
           ></textarea>
         </div>
+         {error && <p className="text-red-500 text-xs text-center">{error}</p>}
         <div>
-          <button type="submit" className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider">
-            Request Invitation
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider disabled:bg-gray-400"
+          >
+            {isSubmitting ? t.ticket_button_submitting : t.ticket_button}
           </button>
         </div>
       </form>

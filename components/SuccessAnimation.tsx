@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const KeyIcon: React.FC = () => (
   <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
@@ -7,14 +8,16 @@ const KeyIcon: React.FC = () => (
 );
 
 const SuccessAnimation: React.FC = () => {
+  const { t } = useLanguage();
+
   return (
     <div className="text-center p-4">
       <div className="flex justify-center mb-6 animate-fade-in-key">
         <KeyIcon />
       </div>
-      <h2 className="font-serif-display text-3xl text-white mb-2">Request Received</h2>
+      <h2 className="font-serif-display text-3xl text-white mb-2">{t.success_title}</h2>
       <p className="text-gray-400">
-        If you are chosen, the key will find you.
+        {t.success_paragraph}
       </p>
       <style>{`
         @keyframes fade-in-key-anim {
