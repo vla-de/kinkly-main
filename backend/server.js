@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 import cors from 'cors';
 import paypal from '@paypal/checkout-server-sdk';
 import dotenv from 'dotenv';
-import pg from 'pg'; // Import the pg library
+import { Pool } from 'pg'; // Import the pg Pool class directly
 
 // HINWEIS: Für den E-Mail-Versand würden Sie einen Dienst wie Resend hinzufügen.
 // import { Resend } from 'resend';
@@ -21,7 +21,6 @@ const PORT = process.env.PORT || 4242;
 
 
 // Database-Konfiguration
-const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
