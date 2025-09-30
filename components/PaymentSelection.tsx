@@ -11,10 +11,10 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
 
 // **WICHTIG**: Ersetzen Sie dies durch Ihren PUBLISHABLE Stripe Key.
-const stripePromise = loadStripe('pk_test_YOUR_PUBLISHABLE_KEY');
+const stripePromise = loadStripe('pk_test_D0yGFsSbMLDTGbr3nhQshR7400Xrp59x45');
 
 // **WICHTIG**: Ersetzen Sie dies mit der öffentlichen URL Ihres Backends auf Render.
-const API_BASE_URL = 'https://IHR-BACKEND-NAME.onrender.com';
+const API_BASE_URL = 'https://kinkly-backend.onrender.com/';
 
 // FIX: Define missing types for PayPal callbacks locally.
 interface OnApproveData {
