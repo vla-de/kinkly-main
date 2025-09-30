@@ -1,19 +1,20 @@
-// 1. Abhängigkeiten importieren
-const express = require('express');
-const Stripe = require('stripe');
-const cors = require('cors');
-const paypal = require('@paypal/checkout-server-sdk');
-require('dotenv').config(); // Lädt Umgebungsvariablen aus der .env-Datei
+// 1. Abhängigkeiten importieren (jetzt mit ES Module Syntax)
+import express from 'express';
+import Stripe from 'stripe';
+import cors from 'cors';
+import paypal from '@paypal/checkout-server-sdk';
+import dotenv from 'dotenv';
+
+dotenv.config(); // Lädt Umgebungsvariablen aus der .env-Datei
 
 // 2. Initialisierung
 const app = express();
 const PORT = 4242; // Port, auf dem unser Backend laufen wird
 
 // Stripe-Konfiguration
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // PayPal-Konfiguration
-// TODO: Der Benutzer muss das SDK installieren: npm install @paypal/checkout-server-sdk
 const Environment = process.env.NODE_ENV === 'production'
   ? paypal.core.LiveEnvironment
   : paypal.core.SandboxEnvironment;
@@ -31,9 +32,12 @@ app.use(express.json());
 // 4. Hilfsfunktionen
 const calculateOrderAmount = (priceString) => {
   if (!priceString) return 0;
-  const priceNumber = parseFloat(priceString.replace(/€|\s/g, '').replace('.', ''));
-  return priceNumber * 100; // In Cent für Stripe
+  // Entfernt "€", ". " und ersetzt "," durch "." für die Umwandlung
+  const cleanedPrice = priceString.replace(/€|\s/g, '').replace(/\./g, '').replace(',', '.');
+  const priceNumber = parseFloat(cleanedPrice);
+  return Math.round(priceNumber * 100); // In Cent für Stripe, gerundet
 };
+
 
 // 5. API-Routen
 

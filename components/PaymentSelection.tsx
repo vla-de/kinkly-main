@@ -6,11 +6,22 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
-import { PayPalScriptProvider, PayPalButtons, OnApproveData, CreateOrderData } from '@paypal/react-paypal-js';
+// FIX: OnApproveData and CreateOrderData are not exported from this package.
+import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 
 
 // **WICHTIG**: Ersetzen Sie dies durch Ihren PUBLISHABLE Stripe Key.
 const stripePromise = loadStripe('pk_test_YOUR_PUBLISHABLE_KEY');
+
+// **WICHTIG**: Ersetzen Sie dies mit der öffentlichen URL Ihres Backends auf Render.
+const API_BASE_URL = 'https://IHR-BACKEND-NAME.onrender.com';
+
+// FIX: Define missing types for PayPal callbacks locally.
+interface OnApproveData {
+  orderID: string;
+}
+type CreateOrderData = Record<string, unknown>;
+
 
 const CARD_ELEMENT_OPTIONS = {
   style: {
@@ -60,7 +71,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedT
         return;
     }
     
-    const response = await fetch('http://localhost:4242/api/create-payment-intent', {
+    const response = await fetch(`${API_BASE_URL}/api/create-payment-intent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ price: selectedTier?.price })
@@ -137,7 +148,7 @@ const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, s
   const createPayPalOrder = async (data: CreateOrderData): Promise<string> => {
     setPaymentError(null);
     try {
-      const response = await fetch('http://localhost:4242/api/paypal/create-order', {
+      const response = await fetch(`${API_BASE_URL}/api/paypal/create-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ price: selectedTier?.price }),
@@ -155,7 +166,7 @@ const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, s
 
   const onPayPalApprove = async (data: OnApproveData): Promise<void> => {
     try {
-      const response = await fetch('http://localhost:4242/api/paypal/capture-order', {
+      const response = await fetch(`${API_BASE_URL}/api/paypal/capture-order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderID: data.orderID }),

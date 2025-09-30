@@ -13,7 +13,12 @@
     "react-dom": "^19.1.1",
     "@stripe/stripe-js": "latest",
     "@stripe/react-stripe-js": "latest",
-    "@paypal/react-paypal-js": "latest"
+    "@paypal/react-paypal-js": "latest",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "stripe": "^18.5.0",
+    "@paypal/checkout-server-sdk": "^1.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
