@@ -54,8 +54,7 @@ const initializeDb = async () => {
       );
     `);
     console.log('Database tables are ready.');
-  } catch (err)
-{
+  } catch (err) {
     console.error('Error initializing database:', err);
   }
 };
