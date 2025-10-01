@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; //test
+import React, { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
@@ -6,6 +6,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
+import { type StripeCardElement } from '@stripe/stripe-js';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -15,7 +16,7 @@ const API_BASE_URL = 'https://kinkly-backend.onrender.com';
 interface OnApproveData {
   orderID: string;
 }
-type CreateOrderData = Record<string, unknown>; 
+type CreateOrderData = Record<string, unknown>;
 
 
 const CARD_ELEMENT_OPTIONS = {
@@ -65,7 +66,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onPaymentSuccess, selectedT
       return;
     }
 
-    const cardElement = elements.getElement(CardElement);
+    const cardElement = elements.getElement('card');
     if (!cardElement) {
         setError("Card element not found.");
         setProcessing(false);
