@@ -21,19 +21,19 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
           <PricingTier 
             title={t.tier1_title}
-            price="€950"
+            price="€995"
             description={t.tier1_desc}
             features={t.tier1_features}
-            onSelect={() => onTierSelect({ title: t.tier1_title, price: '€950' })}
+            onSelect={() => onTierSelect({ title: t.tier1_title, price: '€995' })}
             ctaText={t.tier1_cta}
           />
           <PricingTier 
             title={t.tier2_title}
-            price="€2.500"
+            price="€2.000"
             description={t.tier2_desc}
             features={t.tier2_features}
             isFeatured={true}
-            onSelect={() => onTierSelect({ title: t.tier2_title, price: '€2.500' })}
+            onSelect={() => onTierSelect({ title: t.tier2_title, price: '€2.000' })}
             ctaText={t.tier2_cta}
           />
           <PricingTier 
