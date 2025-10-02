@@ -9,7 +9,7 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess }) => {
   const { t } = useLanguage();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
-  const placeholderCode = 'SECRET2024'; // Placeholder for testing
+  const placeholderCode = 'S7'; // Placeholder for testing
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
