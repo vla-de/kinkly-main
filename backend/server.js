@@ -21,15 +21,25 @@ const PORT = process.env.PORT || 4242;
 
 
 // Database-Konfiguration
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false // Required for Render connections
-  }
-});
+let pool;
+if (process.env.DATABASE_URL) {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false // Required for Render connections
+    }
+  });
+  console.log('Postgres: DATABASE_URL detected, pool created.');
+} else {
+  console.warn('Postgres: DATABASE_URL is not set. API routes depending on DB will fail.');
+}
 
 // Create tables if they don't exist
 const initializeDb = async () => {
+  if (!pool) {
+    console.warn('Skipping DB initialization: no pool (DATABASE_URL missing).');
+    return;
+  }
   try {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS applications (
@@ -183,6 +193,23 @@ const sendConfirmationEmail = async (fullName, email, tier) => {
 
 // 5. API-Routen
 
+// Health endpoints to help diagnose deployment issues
+app.get('/health', (req, res) => {
+  res.json({ ok: true, env: process.env.NODE_ENV || 'development' });
+});
+
+app.get('/db/health', async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({ ok: false, error: 'No database pool. Set DATABASE_URL.' });
+  }
+  try {
+    const r = await pool.query('SELECT NOW() as now');
+    res.json({ ok: true, now: r.rows[0].now });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Create a new application
 app.post('/api/applications', async (req, res) => {
   const { fullName, email, message, tier } = req.body;
@@ -190,6 +217,9 @@ app.post('/api/applications', async (req, res) => {
     return res.status(400).json({ error: 'Full name, email, and tier are required.' });
   }
   try {
+    if (!pool) {
+      throw new Error('Database is not configured. Set DATABASE_URL in environment.');
+    }
     const result = await pool.query(
       'INSERT INTO applications (full_name, email, message, tier) VALUES ($1, $2, $3, $4) RETURNING id',
       [fullName, email, message || null, tier]
@@ -197,7 +227,8 @@ app.post('/api/applications', async (req, res) => {
     res.status(201).json({ applicationId: result.rows[0].id });
   } catch (error) {
     console.error('Error creating application:', error);
-    res.status(500).json({ error: 'Internal server error.' });
+    const message = process.env.NODE_ENV === 'production' ? 'Internal server error.' : (error && error.message ? error.message : 'Internal server error.');
+    res.status(500).json({ error: message });
   }
 });
 
@@ -302,6 +333,50 @@ app.post('/api/paypal/capture-order', async (req, res) => {
     await pool.query('ROLLBACK');
     console.error(err);
     res.status(500).send({ error: 'Failed to capture PayPal payment.' });
+  }
+});
+
+const express = require('express');
+const { Pool } = require('pg');  // Für Postgres
+require('dotenv').config();  // Lade .env
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// DB-Pool (ersetze mit deiner Config, falls anders)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }  // Für Render/Prod
+});
+
+// Middleware (für JSON, etc.)
+app.use(express.json());
+
+// Health-Check: Server-Status
+app.get('/health', (req, res) => {
+  res.json({ ok: true, message: 'Server is running!' });
+});
+
+// DB-Health-Check: Testet Verbindung + Query
+app.get('/db/health', async (req, res) => {
+  try {
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL environment variable is missing!');
+    }
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');  // Simple Test-Query
+    client.release();
+    res.json({ 
+      ok: true, 
+      message: 'DB connected successfully!', 
+      serverTime: result.rows[0].now 
+    });
+  } catch (error) {
+    console.error('DB Health Error:', error);
+    res.status(500).json({ 
+      ok: false, 
+      error: process.env.NODE_ENV === 'development' ? error.message : 'DB connection failed' 
+    });
   }
 });
 

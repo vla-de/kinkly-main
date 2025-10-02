@@ -140,7 +140,7 @@ interface PaymentSelectionProps {
   applicationId: string | null;
 }
 
-const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_SANDBOX_CLIENT_ID"; // Replace with your actual ID
+const PAYPAL_CLIENT_ID = "ARz9eXbkRgKgSiqMcyKef3ioBL1-7LT1xlcu5C-0eSs_TdNJuTfJmBC2Ip7qpTvDXdpY7BMDxDAesYnh"; // Replace with your actual ID
 
 const PaymentSelection: React.FC<PaymentSelectionProps> = ({ onPaymentSuccess, selectedTier, applicationId }) => {
   const { t } = useLanguage();
