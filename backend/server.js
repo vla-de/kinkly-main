@@ -375,8 +375,9 @@ const authenticateAdmin = (req, res, next) => {
     return res.status(401).json({ error: 'No token provided' });
   }
   
-  // Simple token validation (in production, use JWT)
-  if (token === process.env.ADMIN_TOKEN || token === 'admin123') {
+  // Environment-based token validation
+  const validToken = process.env.ADMIN_TOKEN || 'admin123';
+  if (token === validToken) {
     next();
   } else {
     res.status(401).json({ error: 'Invalid token' });
@@ -387,9 +388,13 @@ const authenticateAdmin = (req, res, next) => {
 app.post('/api/admin/login', async (req, res) => {
   const { username, password } = req.body;
   
-  // Simple hardcoded admin credentials (in production, use proper authentication)
-  if (username === 'admin' && password === 'kinkly2024') {
-    res.json({ token: 'admin123' });
+  // Environment-based admin credentials
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'kinkly2024';
+  const adminToken = process.env.ADMIN_TOKEN || 'admin123';
+  
+  if (username === adminUsername && password === adminPassword) {
+    res.json({ token: adminToken });
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
   }

@@ -48,24 +48,30 @@ const AdminPanel: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
+      const token = localStorage.getItem('adminToken');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
       switch (activeTab) {
         case 'users':
-          const usersResponse = await fetch('/api/admin/users');
+          const usersResponse = await fetch('/api/admin/users', { headers });
           const usersData = await usersResponse.json();
           setUsers(usersData);
           break;
         case 'referrals':
-          const referralsResponse = await fetch('/api/admin/referral-codes');
+          const referralsResponse = await fetch('/api/admin/referral-codes', { headers });
           const referralsData = await referralsResponse.json();
           setReferralCodes(referralsData);
           break;
         case 'analytics':
-          const statsResponse = await fetch('/api/admin/stats');
+          const statsResponse = await fetch('/api/admin/stats', { headers });
           const statsData = await statsResponse.json();
           setStats(statsData);
           break;
         case 'scarcity':
-          const scarcityResponse = await fetch('/api/admin/scarcity');
+          const scarcityResponse = await fetch('/api/admin/stats', { headers });
           const scarcityData = await scarcityResponse.json();
           setStats(scarcityData);
           break;
@@ -80,9 +86,13 @@ const AdminPanel: React.FC = () => {
 
   const createReferralCode = async (userId: number, maxUses: number, expiresAt?: string) => {
     try {
+      const token = localStorage.getItem('adminToken');
       const response = await fetch('/api/admin/referral-codes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify({ userId, maxUses, expiresAt })
       });
       if (response.ok) {
@@ -95,9 +105,13 @@ const AdminPanel: React.FC = () => {
 
   const updateScarcity = async (remainingTickets: number) => {
     try {
+      const token = localStorage.getItem('adminToken');
       const response = await fetch('/api/admin/scarcity', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify({ remainingTickets })
       });
       if (response.ok) {
