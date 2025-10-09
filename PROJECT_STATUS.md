@@ -71,6 +71,9 @@ Luxuriöse, mystische Benutzererfahrung für eine exklusive, hochpreisige Event-
 - ✅ **Public-APIs**: Event-Status, Referral-Validierung, Warteliste
 - ✅ **Payment-Integration**: Stripe und PayPal
 - ✅ **Datenbank-Migrationen**: Robuste Migration für Schema-Änderungen
+- ✅ **E-Mail-System**: Resend-Integration mit Bestätigungs-E-Mails
+- ✅ **Session-Management**: IP-basierte Code-Verwendungs-Begrenzung
+- ✅ **Referral-Code-Optimierung**: Zählung nur bei tatsächlichen Käufen
 
 ### 7. **Deployment & Hosting**
 - ✅ **Frontend**: Vercel mit korrekten Rewrite-Regeln
@@ -83,38 +86,45 @@ Luxuriöse, mystische Benutzererfahrung für eine exklusive, hochpreisige Event-
 ## 🚧 Offene TODOs & Nächste Schritte
 
 ### **Hochpriorität**
-1. **E-Mail-System (Resend-Integration)**
-   - [ ] Stripe Webhook für `checkout.session.completed`
-   - [ ] Automatische Bestätigungs-E-Mails nach Zahlung
-   - [ ] E-Mail-Templates für verschiedene Szenarien
+1. **E-Mail-System (Resend-Integration)** ✅
+   - ✅ Stripe Webhook für `checkout.session.completed`
+   - ✅ Automatische Bestätigungs-E-Mails nach Zahlung
+   - ✅ E-Mail-Templates für verschiedene Szenarien
+   - ✅ Admin-Panel E-Mail-Button für Waitlist-Benutzer
 
-2. **DSGVO-Compliance**
+2. **Referral Code System Verbesserungen** ✅
+   - ✅ Zählung nur bei tatsächlichen Käufen (nicht bei Validierung)
+   - ✅ Session/IP-basierte Begrenzung für Code-Verwendung
+   - ✅ Formular-Daten-Übertragung zwischen Landing-Page und Event-Seite
+   - ✅ Datenbank-Migration für referral_code_id
+
+3. **DSGVO-Compliance**
    - [ ] Cookie-Consent Banner (`react-cookie-consent`)
    - [ ] Datenschutz-Seite aktualisieren
    - [ ] AGB-Seite erstellen
    - [ ] Impressum vervollständigen
 
 ### **Mittlere Priorität**
-3. **Erweiterte Admin-Features**
+4. **Erweiterte Admin-Features**
    - [ ] E-Mail-Kampagnen-System
    - [ ] Erweiterte Analytics und Berichte
    - [ ] Bulk-Operations für Benutzer
    - [ ] Audit-Log für Admin-Aktionen
 
-4. **Benutzer-Experience**
+5. **Benutzer-Experience**
    - [ ] Erweiterte Animationen und Übergänge
    - [ ] Mobile-Optimierung verfeinern
    - [ ] Loading-States verbessern
    - [ ] Error-Handling optimieren
 
 ### **Niedrige Priorität**
-5. **Technische Verbesserungen**
+6. **Technische Verbesserungen**
    - [ ] Performance-Optimierung
    - [ ] Code-Refactoring
    - [ ] Unit-Tests hinzufügen
    - [ ] Monitoring und Logging
 
-6. **Erweiterte Features**
+7. **Erweiterte Features**
    - [ ] Multi-Event-Support
    - [ ] Erweiterte Zahlungsoptionen
    - [ ] Social-Media-Integration

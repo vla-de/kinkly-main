@@ -250,7 +250,7 @@ const AdminPanel: React.FC = () => {
         <div className="flex space-x-1 mb-8 border-b border-gray-800">
           {[
             { key: 'users', label: 'Users' },
-            { key: 'referrals', label: 'Referral Codes' },
+            { key: 'referrals', label: 'Serpent Tokens' },
             { key: 'waitlist', label: 'Waitlist' },
             { key: 'analytics', label: 'Analytics' },
             { key: 'scarcity', label: 'Scarcity Management' }
@@ -356,7 +356,7 @@ const AdminPanel: React.FC = () => {
           {activeTab === 'referrals' && !loading && (
             <div>
               <div className="flex justify-between items-center mb-6">
-                <h2 className="font-serif-display text-2xl text-white">Referral Codes</h2>
+                <h2 className="font-serif-display text-2xl text-white">Serpent Tokens</h2>
                 <button 
                   onClick={() => {
                     const userId = prompt('Enter User ID to generate code for:');
@@ -458,7 +458,7 @@ const AdminPanel: React.FC = () => {
                       <th className="text-left py-3 px-4">First Name</th>
                       <th className="text-left py-3 px-4">Last Name</th>
                       <th className="text-left py-3 px-4">Email</th>
-                      <th className="text-left py-3 px-4">Referral Code</th>
+                      <th className="text-left py-3 px-4">Serpent Token</th>
                       <th className="text-left py-3 px-4">Joined</th>
                       <th className="text-left py-3 px-4">Actions</th>
                     </tr>

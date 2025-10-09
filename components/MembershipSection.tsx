@@ -9,16 +9,16 @@ interface MembershipSectionProps {
 const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) => {
   const { t } = useLanguage();
 
-  // Extract referral code from URL and store in sessionStorage
+  // Extract serpent token from URL and store in sessionStorage
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const referralCode = urlParams.get('ref');
+    const serpentToken = urlParams.get('serpentToken');
     
-    if (referralCode) {
-      sessionStorage.setItem('referralCode', referralCode);
-      // Clean up URL by removing the ref parameter
+    if (serpentToken) {
+      sessionStorage.setItem('referralCode', serpentToken);
+      // Clean up URL by removing the serpentToken parameter
       const newUrl = new URL(window.location.href);
-      newUrl.searchParams.delete('ref');
+      newUrl.searchParams.delete('serpentToken');
       window.history.replaceState({}, '', newUrl.toString());
     }
   }, []);

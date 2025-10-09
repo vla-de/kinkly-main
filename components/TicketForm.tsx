@@ -15,6 +15,7 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
     lastName: '',
     email: ''
   });
+  const [referralCodeId, setReferralCodeId] = useState<number | null>(null);
   const API_BASE_URL = 'https://kinkly-backend.onrender.com';
 
   // Load form data from localStorage on component mount
@@ -34,6 +35,12 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
         console.error('Error parsing saved form data:', error);
       }
     }
+    
+    // Load referral code ID from sessionStorage
+    const savedReferralCodeId = sessionStorage.getItem('referralCodeId');
+    if (savedReferralCodeId) {
+      setReferralCodeId(parseInt(savedReferralCodeId));
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,13 +48,13 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
     setIsSubmitting(true);
     setError('');
 
-    const formData = new FormData(e.currentTarget);
     const data = {
-      firstName: formData.get('firstName') as string,
-      lastName: formData.get('lastName') as string,
-      email: formData.get('email') as string,
-      message: formData.get('message') as string,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      message: (e.currentTarget.querySelector('textarea[name="message"]') as HTMLTextAreaElement)?.value || '',
       tier: selectedTier?.title || 'The Invitation', // Default to a valid tier
+      referralCodeId: referralCodeId
     };
     
     console.log('Submitting data:', data); // Debug log

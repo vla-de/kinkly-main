@@ -34,6 +34,7 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitli
         const data = await response.json();
         localStorage.setItem('referralCode', codeToValidate.trim().toUpperCase());
         localStorage.setItem('referrerId', data.referrerId);
+        sessionStorage.setItem('referralCodeId', data.referralCodeId);
         onSuccess();
       } else {
         // If auto-validation fails, clear the stored code
@@ -62,6 +63,7 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitli
         const data = await response.json();
         localStorage.setItem('referralCode', code.trim().toUpperCase());
         localStorage.setItem('referrerId', data.referrerId);
+        sessionStorage.setItem('referralCodeId', data.referralCodeId);
         onSuccess();
       } else {
         const errorData = await response.json();
@@ -74,8 +76,8 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitli
 
   return (
     <div>
-      <h2 className="font-serif-display text-3xl text-white text-center mb-2">{t.referral_title}</h2>
-      <p className="text-center text-gray-400 mb-6 text-sm">{t.referral_paragraph}</p>
+      <h2 className="font-serif-display text-3xl text-white text-center mb-2">DER SCHLÜSSEL, BITTE.</h2>
+      <p className="text-center text-gray-400 mb-6 text-sm">Geben Sie Ihren Serpent Token ein, um fortzufahren.</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="referral-code" className="sr-only">Access Code</label>
@@ -85,7 +87,7 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitli
             name="referral-code"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder={t.referral_placeholder}
+            placeholder="Serpent Token"
             required
             className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-3 px-4 text-white text-center tracking-widest uppercase focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
           />
@@ -93,7 +95,7 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitli
         {error && <p className="text-red-500 text-xs text-center">{error}</p>}
         <div>
           <button type="submit" className="btn-exclusive w-full bg-white text-black py-3 px-4 font-semibold tracking-wider">
-            {t.referral_button}
+            EINTRETEN
           </button>
         </div>
       </form>

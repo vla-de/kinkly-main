@@ -45,7 +45,7 @@ const sendEmail = async (to, subject, html, text) => {
 
 const sendEventInviteEmail = async (email, firstName, lastName, referralCode) => {
   const eventUrl = referralCode 
-    ? `https://kinkly-main.vercel.app/event?ref=${referralCode}`
+    ? `https://kinkly-main.vercel.app/event?serpentToken=${referralCode}`
     : 'https://kinkly-main.vercel.app/event';
   
   const subject = 'Your Invitation to Kinkly Berlin';
@@ -184,6 +184,21 @@ const initializeDb = async () => {
       console.log('Migration completed successfully');
     }
     
+    // Create or migrate applications table
+    const applicationsCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'applications' AND column_name = 'referral_code_id'
+    `);
+    
+    if (applicationsCheck.rows.length === 0) {
+      console.log('Adding referral_code_id to applications table...');
+      await pool.query(`
+        ALTER TABLE applications 
+        ADD COLUMN referral_code_id INTEGER REFERENCES referral_codes(id)
+      `);
+      console.log('Applications table migrated successfully');
+    }
+    
     await pool.query(`
       CREATE TABLE IF NOT EXISTS applications (
         id SERIAL PRIMARY KEY,
@@ -193,6 +208,7 @@ const initializeDb = async () => {
         message TEXT,
         tier VARCHAR(100) NOT NULL,
         status VARCHAR(50) DEFAULT 'pending_payment',
+        referral_code_id INTEGER REFERENCES referral_codes(id),
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
@@ -217,6 +233,19 @@ const initializeDb = async () => {
         expires_at TIMESTAMPTZ,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    
+    // Create referral code usage tracking table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_code_usage (
+        id SERIAL PRIMARY KEY,
+        referral_code_id INTEGER REFERENCES referral_codes(id),
+        ip_address INET,
+        user_agent TEXT,
+        session_id VARCHAR(255),
+        used_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(referral_code_id, ip_address, session_id)
       );
     `);
     // Create or migrate event_settings table
@@ -358,9 +387,19 @@ app.post('/api/stripe-webhook', express.raw({type: 'application/json'}), verifyS
           [applicationId, paymentIntent.id, paymentIntent.amount, paymentIntent.status]
         );
         const appResult = await pool.query(
-          "UPDATE applications SET status = 'pending_review' WHERE id = $1 RETURNING first_name, last_name, email, tier",
+          "UPDATE applications SET status = 'pending_review' WHERE id = $1 RETURNING first_name, last_name, email, tier, referral_code_id",
           [applicationId]
         );
+        
+        // Increment referral code usage count if referral code was used
+        if (appResult.rows.length > 0 && appResult.rows[0].referral_code_id) {
+          await pool.query(`
+            UPDATE referral_codes 
+            SET used_count = used_count + 1 
+            WHERE id = $1
+          `, [appResult.rows[0].referral_code_id]);
+        }
+        
         await pool.query('COMMIT');
         console.log(`Payment for application ${applicationId} recorded.`);
         
@@ -446,7 +485,7 @@ app.get('/db/health', async (req, res) => {
 
 // Create a new application
 app.post('/api/applications', async (req, res) => {
-  const { firstName, lastName, email, message, tier } = req.body;
+  const { firstName, lastName, email, message, tier, referralCodeId } = req.body;
   if (!firstName || !lastName || !email || !tier) {
     return res.status(400).json({ error: 'First name, last name, email, and tier are required.' });
   }
@@ -455,8 +494,8 @@ app.post('/api/applications', async (req, res) => {
       throw new Error('Database is not configured. Set DATABASE_URL in environment.');
     }
     const result = await pool.query(
-      'INSERT INTO applications (first_name, last_name, email, message, tier) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-      [firstName, lastName, email, message || null, tier]
+      'INSERT INTO applications (first_name, last_name, email, message, tier, referral_code_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+      [firstName, lastName, email, message || null, tier, referralCodeId || null]
     );
     res.status(201).json({ applicationId: result.rows[0].id });
   } catch (error) {
@@ -549,9 +588,19 @@ app.post('/api/paypal/capture-order', async (req, res) => {
         [applicationId, captureResult.id, amountInCents, captureResult.status.toLowerCase()]
       );
       const appResult = await pool.query(
-        "UPDATE applications SET status = 'pending_review' WHERE id = $1 RETURNING first_name, last_name, email, tier",
+        "UPDATE applications SET status = 'pending_review' WHERE id = $1 RETURNING first_name, last_name, email, tier, referral_code_id",
         [applicationId]
       );
+      
+      // Increment referral code usage count if referral code was used
+      if (appResult.rows.length > 0 && appResult.rows[0].referral_code_id) {
+        await pool.query(`
+          UPDATE referral_codes 
+          SET used_count = used_count + 1 
+          WHERE id = $1
+        `, [appResult.rows[0].referral_code_id]);
+      }
+      
       await pool.query('COMMIT');
       console.log(`PayPal payment for application ${applicationId} recorded.`);
 
@@ -839,15 +888,20 @@ app.put('/api/admin/scarcity', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Referral code validation endpoint
+// Serpent token validation endpoint
 app.post('/api/auth/validate-code', async (req, res) => {
   const { code } = req.body;
   
   if (!code) {
     return res.status(400).json({ error: 'Code is required' });
   }
-  
+
   try {
+    // Get client IP and session info
+    const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const sessionId = req.headers['x-session-id'] || `ip_${clientIP}_${Date.now()}`;
+    
     const result = await pool.query(`
       SELECT rc.*, CONCAT(a.first_name, ' ', a.last_name) as referrer_name
       FROM referral_codes rc
@@ -858,22 +912,33 @@ app.post('/api/auth/validate-code', async (req, res) => {
     `, [code]);
     
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Der Schlüssel passt nicht.' });
+      return res.status(400).json({ error: 'Der Serpent Token passt nicht.' });
     }
     
     const referralCode = result.rows[0];
     
-    // Increment usage count
+    // Check if this IP/session has already used this code
+    const usageCheck = await pool.query(`
+      SELECT id FROM referral_code_usage 
+      WHERE referral_code_id = $1 AND (ip_address = $2 OR session_id = $3)
+    `, [referralCode.id, clientIP, sessionId]);
+    
+    if (usageCheck.rows.length > 0) {
+      return res.status(400).json({ error: 'Dieser Serpent Token wurde bereits von dieser Session verwendet.' });
+    }
+    
+    // Record this usage attempt (but don't increment used_count yet)
     await pool.query(`
-      UPDATE referral_codes 
-      SET used_count = used_count + 1 
-      WHERE id = $1
-    `, [referralCode.id]);
+      INSERT INTO referral_code_usage (referral_code_id, ip_address, user_agent, session_id)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (referral_code_id, ip_address, session_id) DO NOTHING
+    `, [referralCode.id, clientIP, userAgent, sessionId]);
     
     res.json({ 
       valid: true, 
       referrerId: referralCode.user_id,
-      referrerName: referralCode.referrer_name
+      referrerName: referralCode.referrer_name,
+      referralCodeId: referralCode.id
     });
   } catch (error) {
     console.error('Error validating referral code:', error);
