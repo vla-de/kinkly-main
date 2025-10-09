@@ -18,14 +18,9 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
     setError('');
 
     const formData = new FormData(e.currentTarget);
-    const fullName = formData.get('name') as string;
-    const nameParts = fullName.split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    
     const data = {
-      firstName,
-      lastName,
+      firstName: formData.get('firstName') as string,
+      lastName: formData.get('lastName') as string,
       email: formData.get('email') as string,
       message: formData.get('message') as string,
       tier: selectedTier?.title || 'Unknown',
@@ -65,11 +60,21 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
       </p>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-400">{t.ticket_name_label}</label>
+          <label htmlFor="firstName" className="block text-sm font-medium text-gray-400">Vorname</label>
           <input
             type="text"
-            id="name"
-            name="name"
+            id="firstName"
+            name="firstName"
+            required
+            className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+          />
+        </div>
+        <div>
+          <label htmlFor="lastName" className="block text-sm font-medium text-gray-400">Nachname</label>
+          <input
+            type="text"
+            id="lastName"
+            name="lastName"
             required
             className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
           />

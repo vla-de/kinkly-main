@@ -41,6 +41,45 @@ const initializeDb = async () => {
     return;
   }
   try {
+    // Check if old full_name column exists and migrate
+    const checkColumn = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'applications' AND column_name = 'full_name'
+    `);
+    
+    if (checkColumn.rows.length > 0) {
+      console.log('Migrating applications table...');
+      // Add new columns if they don't exist
+      await pool.query(`
+        ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS first_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS last_name VARCHAR(255)
+      `);
+      
+      // Migrate data from full_name to first_name and last_name
+      await pool.query(`
+        UPDATE applications 
+        SET first_name = SPLIT_PART(full_name, ' ', 1),
+            last_name = CASE 
+              WHEN POSITION(' ' IN full_name) > 0 
+              THEN SUBSTRING(full_name FROM POSITION(' ' IN full_name) + 1)
+              ELSE ''
+            END
+        WHERE first_name IS NULL OR last_name IS NULL
+      `);
+      
+      // Make columns NOT NULL after migration
+      await pool.query(`
+        ALTER TABLE applications 
+        ALTER COLUMN first_name SET NOT NULL,
+        ALTER COLUMN last_name SET NOT NULL
+      `);
+      
+      // Drop old column
+      await pool.query(`ALTER TABLE applications DROP COLUMN IF EXISTS full_name`);
+      console.log('Migration completed successfully');
+    }
+    
     await pool.query(`
       CREATE TABLE IF NOT EXISTS applications (
         id SERIAL PRIMARY KEY,
