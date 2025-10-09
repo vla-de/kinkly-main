@@ -3,6 +3,14 @@
     {
       "source": "/api/(.*)",
       "destination": "https://kinkly-backend.onrender.com/api/$1"
+    },
+    {
+      "source": "/admin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/admin/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
