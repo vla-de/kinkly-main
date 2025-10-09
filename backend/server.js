@@ -946,6 +946,67 @@ app.post('/api/auth/validate-code', async (req, res) => {
   }
 });
 
+// Check if email exists in applications or waitlist
+app.post('/api/check-email', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  
+  try {
+    // Check in applications table
+    const appResult = await pool.query(`
+      SELECT id, first_name, last_name, email, tier, status 
+      FROM applications 
+      WHERE email = $1
+    `, [email]);
+    
+    // Check in waitlist table
+    const waitlistResult = await pool.query(`
+      SELECT id, first_name, last_name, email, referral_code 
+      FROM waitlist 
+      WHERE email = $1
+    `, [email]);
+    
+    if (appResult.rows.length > 0) {
+      const user = appResult.rows[0];
+      return res.json({
+        exists: true,
+        type: 'application',
+        user: {
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          email: user.email,
+          tier: user.tier,
+          status: user.status
+        }
+      });
+    } else if (waitlistResult.rows.length > 0) {
+      const user = waitlistResult.rows[0];
+      return res.json({
+        exists: true,
+        type: 'waitlist',
+        user: {
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          email: user.email,
+          referralCode: user.referral_code
+        }
+      });
+    } else {
+      return res.json({
+        exists: false
+      });
+    }
+  } catch (error) {
+    console.error('Error checking email:', error);
+    res.status(500).json({ error: 'Failed to check email' });
+  }
+});
+
 // Waitlist endpoint
 app.post('/api/waitlist', async (req, res) => {
   console.log('Waitlist API called with:', req.body);

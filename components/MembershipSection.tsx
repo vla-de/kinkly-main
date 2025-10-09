@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import PricingTier from './PricingTier';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -8,6 +8,11 @@ interface MembershipSectionProps {
 
 const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) => {
   const { t } = useLanguage();
+  const [ticketCounts, setTicketCounts] = useState({
+    invitation_tickets: 0,
+    circle_tickets: 0,
+    sanctum_tickets: 0
+  });
 
   // Extract serpent token from URL and store in sessionStorage
   useEffect(() => {
@@ -21,6 +26,30 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
       newUrl.searchParams.delete('serpentToken');
       window.history.replaceState({}, '', newUrl.toString());
     }
+  }, []);
+
+  // Fetch ticket counts from backend
+  useEffect(() => {
+    const fetchTicketCounts = async () => {
+      try {
+        const response = await fetch('/api/events/status');
+        if (response.ok) {
+          const data = await response.json();
+          setTicketCounts({
+            invitation_tickets: data.invitationTickets || 0,
+            circle_tickets: data.circleTickets || 0,
+            sanctum_tickets: data.sanctumTickets || 0
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching ticket counts:', error);
+      }
+    };
+
+    fetchTicketCounts();
+    // Update every 30 seconds
+    const interval = setInterval(fetchTicketCounts, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -40,6 +69,7 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
             features={t.tier1_features}
             onSelect={() => onTierSelect({ title: t.tier1_title, price: '€995' })}
             ctaText={t.tier1_cta}
+            remainingTickets={ticketCounts.invitation_tickets}
           />
           <PricingTier 
             title={t.tier2_title}
@@ -49,6 +79,7 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
             isFeatured={true}
             onSelect={() => onTierSelect({ title: t.tier2_title, price: '€2.000' })}
             ctaText={t.tier2_cta}
+            remainingTickets={ticketCounts.circle_tickets}
           />
           <PricingTier 
             title={t.tier3_title}
@@ -57,6 +88,7 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
             features={t.tier3_features}
             onSelect={() => onTierSelect({ title: t.tier3_title, price: '€10.000' })}
             ctaText={t.tier3_cta}
+            remainingTickets={ticketCounts.sanctum_tickets}
           />
         </div>
       </div>

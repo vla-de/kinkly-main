@@ -21,9 +21,11 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
   // Load form data from localStorage on component mount
   useEffect(() => {
     const savedData = localStorage.getItem('kinklyFormData');
+    console.log('Loading form data from localStorage:', savedData);
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
+        console.log('Parsed form data:', parsed);
         setFormData({
           firstName: parsed.firstName || '',
           lastName: parsed.lastName || '',

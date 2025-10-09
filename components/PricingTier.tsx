@@ -8,9 +8,10 @@ interface PricingTierProps {
   isFeatured?: boolean;
   onSelect: () => void;
   ctaText: string;
+  remainingTickets?: number;
 }
 
-const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, features, isFeatured = false, onSelect, ctaText }) => {
+const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, features, isFeatured = false, onSelect, ctaText, remainingTickets }) => {
   const tierClasses = `border p-8 rounded-lg flex flex-col text-center transition-all duration-300 h-full ${
     isFeatured 
       ? 'bg-gray-900 border-gray-600 transform lg:scale-105 shadow-2xl z-10' 
@@ -27,6 +28,17 @@ const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, fe
     <div className={tierClasses}>
       <h3 className="font-serif-display text-2xl text-white mb-2">{title}</h3>
       <p className="text-4xl font-bold font-serif-display text-white mb-4">{price}</p>
+      {remainingTickets !== undefined && (
+        <div className="mb-4">
+          <p className="text-sm text-gray-400">
+            {remainingTickets > 0 ? (
+              <span className="text-yellow-400">Nur noch {remainingTickets} Plätze verfügbar</span>
+            ) : (
+              <span className="text-red-400">Ausverkauft</span>
+            )}
+          </p>
+        </div>
+      )}
       <p className="text-sm text-gray-500 mb-6 min-h-[40px]">{description}</p>
       <ul className="space-y-3 text-gray-400 mb-8 flex-grow text-left">
         {features.map((feature, index) => (
