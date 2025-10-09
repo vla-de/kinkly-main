@@ -115,25 +115,81 @@ const initializeDb = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS event_settings (
-        id INTEGER PRIMARY KEY DEFAULT 1,
-        invitation_tickets INTEGER DEFAULT 20,
-        circle_tickets INTEGER DEFAULT 15,
-        sanctum_tickets INTEGER DEFAULT 10,
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
+    // Create or migrate event_settings table
+    const eventSettingsCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'event_settings' AND column_name = 'invitation_tickets'
     `);
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS waitlist (
-        id SERIAL PRIMARY KEY,
-        first_name VARCHAR(255) NOT NULL,
-        last_name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        referral_code VARCHAR(50),
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
+    
+    if (eventSettingsCheck.rows.length === 0) {
+      console.log('Migrating event_settings table...');
+      // Check if old event_settings table exists
+      const oldEventSettingsCheck = await pool.query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'event_settings' AND column_name = 'remaining_tickets'
+      `);
+      
+      if (oldEventSettingsCheck.rows.length > 0) {
+        // Add new columns to existing table
+        await pool.query(`
+          ALTER TABLE event_settings 
+          ADD COLUMN IF NOT EXISTS invitation_tickets INTEGER DEFAULT 20,
+          ADD COLUMN IF NOT EXISTS circle_tickets INTEGER DEFAULT 15,
+          ADD COLUMN IF NOT EXISTS sanctum_tickets INTEGER DEFAULT 10
+        `);
+        console.log('Event settings table migrated successfully');
+      } else {
+        // Create new table
+        await pool.query(`
+          CREATE TABLE event_settings (
+            id INTEGER PRIMARY KEY DEFAULT 1,
+            invitation_tickets INTEGER DEFAULT 20,
+            circle_tickets INTEGER DEFAULT 15,
+            sanctum_tickets INTEGER DEFAULT 10,
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `);
+        console.log('Event settings table created successfully');
+      }
+    }
+    // Create or migrate waitlist table
+    const waitlistCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'waitlist' AND column_name = 'first_name'
     `);
+    
+    if (waitlistCheck.rows.length === 0) {
+      console.log('Migrating waitlist table...');
+      // Check if old waitlist table exists
+      const oldWaitlistCheck = await pool.query(`
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name = 'waitlist' AND column_name = 'email'
+      `);
+      
+      if (oldWaitlistCheck.rows.length > 0) {
+        // Add new columns to existing table
+        await pool.query(`
+          ALTER TABLE waitlist 
+          ADD COLUMN IF NOT EXISTS first_name VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS last_name VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS referral_code VARCHAR(50)
+        `);
+        console.log('Waitlist table migrated successfully');
+      } else {
+        // Create new table
+        await pool.query(`
+          CREATE TABLE waitlist (
+            id SERIAL PRIMARY KEY,
+            first_name VARCHAR(255) NOT NULL,
+            last_name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            referral_code VARCHAR(50),
+            created_at TIMESTAMPTZ DEFAULT NOW()
+          );
+        `);
+        console.log('Waitlist table created successfully');
+      }
+    }
     console.log('Database tables are ready.');
   } catch (err) {
     console.error('Error initializing database:', err);
@@ -680,13 +736,23 @@ app.post('/api/auth/validate-code', async (req, res) => {
 
 // Waitlist endpoint
 app.post('/api/waitlist', async (req, res) => {
+  console.log('Waitlist API called with:', req.body);
+  
   const { firstName, lastName, email, referralCode } = req.body;
   
   if (!firstName || !lastName || !email) {
+    console.log('Validation failed:', { firstName, lastName, email });
     return res.status(400).json({ error: 'First name, last name, and email are required' });
   }
   
+  if (!pool) {
+    console.error('Database pool not available');
+    return res.status(500).json({ error: 'Database not available' });
+  }
+  
   try {
+    console.log('Inserting into waitlist:', { firstName, lastName, email, referralCode });
+    
     const result = await pool.query(`
       INSERT INTO waitlist (first_name, last_name, email, referral_code) 
       VALUES ($1, $2, $3, $4)
@@ -697,6 +763,8 @@ app.post('/api/waitlist', async (req, res) => {
       RETURNING *
     `, [firstName, lastName, email, referralCode || null]);
     
+    console.log('Waitlist entry created/updated:', result.rows[0]);
+    
     res.json({ 
       success: true, 
       hasReferralCode: !!referralCode,
@@ -704,7 +772,10 @@ app.post('/api/waitlist', async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding to waitlist:', error);
-    res.status(500).json({ error: 'Failed to add to waitlist' });
+    res.status(500).json({ 
+      error: 'Failed to add to waitlist',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
