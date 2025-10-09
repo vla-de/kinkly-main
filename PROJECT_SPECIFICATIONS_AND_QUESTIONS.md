@@ -22,80 +22,62 @@ Das Projekt ist eine exklusive Event-Plattform für "Kinkly Berlin" - eine luxur
 - **Zahlungen**: Stripe
 - **E-Mails**: Resend
 
-## ❓ Klärende Fragen vor der Weiterentwicklung
+## ✅ Bestätigte Spezifikationen
 
 ### 1. **Design & Benutzeroberfläche**
 
-**Frage 1.1**: Soll das aktuelle Design vollständig überarbeitet werden oder basierend auf dem bestehenden Code weiterentwickelt werden?
+**1.1**: ✅ **Bestehender Code als Basis** - Weiterentwicklung auf der aktuellen Architektur
 
-**Frage 1.2**: Welche spezifischen visuellen Elemente sind für die "mystische, luxuriöse" Ästhetik wichtig?
-- Farbschema (aktuell: schwarz/grau)
-- Typografie-Stil
-- Animationen und Übergänge
-- Logo-Design (aktuell: Placeholder)
+**1.2**: ✅ **Visuelle Elemente**:
+- **Farbschema**: Schwarz/Grau beibehalten
+- **Typografie**: Aktueller Stil beibehalten
+- **Animationen**: Subtile Hover-Effekte mit Glow-Effekt für Buttons
+- **Logo**: Buchstabe "K" in Cormorant-Semi
+- **Exklusivität**: Weitere subtile Effekte für luxuriöse Atmosphäre
 
-**Frage 1.3**: Sollen die Textentwürfe der Benutzeroberflächen in deutscher Sprache bleiben oder ist eine mehrsprachige Unterstützung gewünscht?
+**1.3**: ✅ **Mehrsprachigkeit**: DE/EN zweisprachig, erweitert bei neuen Texten
 
 ### 2. **Funktionalität & Features**
 
-**Frage 2.1**: Welche Admin-Panel-Funktionen sind prioritär?
+**2.1**: ✅ **Admin-Panel (Priorität)**:
 - Benutzer- und Referral Code-Verwaltung
-- Event- und Knappheits-Management
+- Knappheits-Management (Event-Management später)
 - Analytics und Berichte
 - E-Mail-Kampagnen
 
-**Frage 2.2**: Sollen zusätzliche Features implementiert werden?
+**2.2**: ✅ **Zusätzliche Features**:
 - Benutzer-Authentifizierung und -Profile
-- Event-Kalender
-- Community-Features
-- Mobile App
+- Werber/Referral-Benutzer mit Einsicht der geworbenen Anzahl
 
-**Frage 2.3**: Wie soll die Knappheits-Simulation funktionieren?
-- Echtzeit-Ticket-Zähler
-- Live-Aktivitäts-Feed
-- Automatische vs. manuelle Anpassungen
+**2.3**: ✅ **Knappheits-Simulation**:
+- Nach Kauf automatisch -1
+- Manuelle Anpassung im Admin-Bereich
+- Simulierter Live-Feed alle paar Minuten oder vor Verlassen des Bereichs
 
 ### 3. **Backend & Datenbank**
 
-**Frage 3.1**: Welche Datenmodelle sind erforderlich?
-- Benutzer (User)
+**3.1**: ✅ **Datenmodelle**:
+- Benutzer (User) - wird zum Werber wenn Code anfordert
 - Referral Codes
 - Events
 - Tickets
 - Zahlungen
 - Warteliste
+- Werber-Profile
 
-**Frage 3.2**: Sollen zusätzliche APIs implementiert werden?
-- Analytics-Endpoints
-- E-Mail-Newsletter
-- Social Media Integration
-- Webhook-Handler
+**3.2**: ✅ **APIs**: Analytics, E-Mail, Webhook-Handler
 
 ### 4. **Sicherheit & Compliance**
 
-**Frage 4.1**: Welche Sicherheitsmaßnahmen sind erforderlich?
-- Rate Limiting
-- Input Validation
-- CORS-Konfiguration
-- Datenverschlüsselung
+**4.1**: ✅ **Sicherheit**: Best Practice für Zahlungen und Kundenschutz
 
-**Frage 4.2**: Welche rechtlichen Anforderungen müssen erfüllt werden?
-- DSGVO-Compliance
-- Cookie-Consent
-- Impressum und Datenschutz
-- AGB
+**4.2**: ✅ **Rechtliche Anforderungen**: DSGVO, Cookie-Consent, Impressum, Datenschutz, AGB
 
 ### 5. **Deployment & Hosting**
 
-**Frage 5.1**: Sollen die aktuellen Hosting-Entscheidungen beibehalten werden?
-- Frontend: Vercel
-- Backend: Render
-- Datenbank: PostgreSQL auf Render
+**5.1**: ✅ **Hosting**: Vercel (Frontend), Render (Backend & DB)
 
-**Frage 5.2**: Welche CI/CD-Pipeline ist gewünscht?
-- Automatische Tests
-- Staging-Umgebung
-- Produktions-Deployment
+**5.2**: ✅ **CI/CD**: Best Practice, nicht aufgebläht, schneller Live-Gang
 
 ## 🎨 Textentwürfe der Benutzeroberflächen
 
