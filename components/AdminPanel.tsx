@@ -39,9 +39,10 @@ interface EventStats {
 
 const AdminPanel: React.FC = () => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'users' | 'referrals' | 'analytics' | 'scarcity'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'referrals' | 'waitlist' | 'analytics' | 'scarcity'>('users');
   const [users, setUsers] = useState<User[]>([]);
   const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
+  const [waitlist, setWaitlist] = useState<any[]>([]);
   const [stats, setStats] = useState<EventStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +74,11 @@ const AdminPanel: React.FC = () => {
           const referralsResponse = await fetch('/api/admin/referral-codes', { headers });
           const referralsData = await referralsResponse.json();
           setReferralCodes(referralsData);
+          break;
+        case 'waitlist':
+          const waitlistResponse = await fetch('/api/admin/waitlist', { headers });
+          const waitlistData = await waitlistResponse.json();
+          setWaitlist(waitlistData);
           break;
         case 'analytics':
           const statsResponse = await fetch('/api/admin/stats', { headers });
@@ -208,6 +214,33 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const sendEventInvite = async (person: any) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/send-invite', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          email: person.email,
+          firstName: person.first_name,
+          lastName: person.last_name,
+          referralCode: person.referral_code
+        })
+      });
+      if (response.ok) {
+        alert('Invite sent successfully!');
+      } else {
+        alert('Failed to send invite');
+      }
+    } catch (err) {
+      console.error('Error sending invite:', err);
+      alert('Error sending invite');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-gray-300 p-6">
       <div className="max-w-7xl mx-auto">
@@ -218,6 +251,7 @@ const AdminPanel: React.FC = () => {
           {[
             { key: 'users', label: 'Users' },
             { key: 'referrals', label: 'Referral Codes' },
+            { key: 'waitlist', label: 'Waitlist' },
             { key: 'analytics', label: 'Analytics' },
             { key: 'scarcity', label: 'Scarcity Management' }
           ].map(tab => (
@@ -369,22 +403,90 @@ const AdminPanel: React.FC = () => {
                               const maxUses = prompt('Enter new max uses:', code.max_uses.toString());
                               const expiresAt = prompt('Enter expiration date (YYYY-MM-DD) or leave empty:', code.expires_at ? code.expires_at.split('T')[0] : '');
                               if (maxUses) {
-                                updateReferralCode(code.id, parseInt(maxUses), expiresAt || undefined);
+                                updateReferralCode(code.id, parseInt(maxUses), expiresAt || undefined, code.is_active);
                               }
                             }}
                             className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs mr-2"
                           >
                             Edit
                           </button>
-                          <button 
-                            onClick={() => {
-                              if (confirm('Are you sure you want to deactivate this code?')) {
-                                deactivateReferralCode(code.id);
-                              }
-                            }}
-                            className="btn-exclusive bg-red-700 hover:bg-red-600 px-3 py-1 text-xs"
+                          {code.is_active ? (
+                            <button 
+                              onClick={() => {
+                                if (confirm('Are you sure you want to deactivate this code?')) {
+                                  deactivateReferralCode(code.id);
+                                }
+                              }}
+                              className="btn-exclusive bg-red-700 hover:bg-red-600 px-3 py-1 text-xs"
+                            >
+                              Deactivate
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => {
+                                if (confirm('Are you sure you want to reactivate this code?')) {
+                                  updateReferralCode(code.id, code.max_uses, code.expires_at, true);
+                                }
+                              }}
+                              className="btn-exclusive bg-green-700 hover:bg-green-600 px-3 py-1 text-xs"
+                            >
+                              Reactivate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Waitlist Tab */}
+          {activeTab === 'waitlist' && !loading && (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="font-serif-display text-2xl text-white">Waitlist</h2>
+                <div className="text-sm text-gray-400">
+                  {waitlist.length} people on waitlist
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left py-3 px-4">First Name</th>
+                      <th className="text-left py-3 px-4">Last Name</th>
+                      <th className="text-left py-3 px-4">Email</th>
+                      <th className="text-left py-3 px-4">Referral Code</th>
+                      <th className="text-left py-3 px-4">Joined</th>
+                      <th className="text-left py-3 px-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {waitlist.map((person) => (
+                      <tr key={person.id} className="border-b border-gray-800 hover:bg-gray-800">
+                        <td className="py-3 px-4">{person.first_name}</td>
+                        <td className="py-3 px-4">{person.last_name}</td>
+                        <td className="py-3 px-4">{person.email}</td>
+                        <td className="py-3 px-4">
+                          {person.referral_code ? (
+                            <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">
+                              {person.referral_code}
+                            </span>
+                          ) : (
+                            <span className="text-gray-500">-</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-gray-400">
+                          {new Date(person.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          <button
+                            onClick={() => sendEventInvite(person)}
+                            className="btn-exclusive bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs"
                           >
-                            Deactivate
+                            Send Invite
                           </button>
                         </td>
                       </tr>
@@ -510,10 +612,10 @@ const AdminPanel: React.FC = () => {
                 />
                 <select
                   name="tier"
-                  required
                   className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
                 >
-                  <option value="">Select Tier</option>
+                  <option value="">Select Tier (optional)</option>
+                  <option value="waitlist">Waitlist</option>
                   <option value="The Invitation">The Invitation</option>
                   <option value="The Circle">The Circle</option>
                   <option value="The Inner Sanctum">The Inner Sanctum</option>

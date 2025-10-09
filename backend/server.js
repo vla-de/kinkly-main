@@ -6,8 +6,8 @@ import paypal from '@paypal/checkout-server-sdk';
 import dotenv from 'dotenv';
 import { Pool } from 'pg'; // Import the pg Pool class directly
 
-// HINWEIS: Für den E-Mail-Versand würden Sie einen Dienst wie Resend hinzufügen.
-// import { Resend } from 'resend';
+// E-Mail-Versand mit Resend
+import { Resend } from 'resend';
 
 dotenv.config();
 
@@ -15,9 +15,113 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4242;
 
-// E-Mail-Client-Initialisierung (Platzhalter)
-// const resend = new Resend(process.env.RESEND_API_KEY);
-// const EMAIL_FROM = process.env.EMAIL_FROM || 'Kinkly Berlin <no-reply@kinkly.eu>';
+// E-Mail-Client-Initialisierung
+const resend = new Resend(process.env.RESEND_API_KEY);
+const EMAIL_FROM = process.env.EMAIL_FROM || 'Kinkly Berlin <no-reply@kinkly.eu>';
+
+// E-Mail-Hilfsfunktionen
+const sendEmail = async (to, subject, html, text) => {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: [to],
+      subject: subject,
+      html: html,
+      text: text
+    });
+    
+    if (error) {
+      console.error('Error sending email:', error);
+      return { success: false, error };
+    }
+    
+    console.log('Email sent successfully:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return { success: false, error };
+  }
+};
+
+const sendEventInviteEmail = async (email, firstName, lastName, referralCode) => {
+  const eventUrl = referralCode 
+    ? `https://kinkly-main.vercel.app/event?ref=${referralCode}`
+    : 'https://kinkly-main.vercel.app/event';
+  
+  const subject = 'Your Invitation to Kinkly Berlin';
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">
+      <h1 style="color: #fff; text-align: center; margin-bottom: 30px;">Kinkly Berlin</h1>
+      
+      <p>Dear ${firstName} ${lastName},</p>
+      
+      <p>You have been invited to join our exclusive event. The invitation awaits you.</p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${eventUrl}" style="background-color: #fff; color: #000; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+          Enter the Event
+        </a>
+      </div>
+      
+      <p style="color: #ccc; font-size: 14px; text-align: center; margin-top: 30px;">
+        This is an exclusive invitation. Please do not share this link.
+      </p>
+    </div>
+  `;
+  
+  const text = `
+    Dear ${firstName} ${lastName},
+    
+    You have been invited to join our exclusive event. The invitation awaits you.
+    
+    Click here to enter: ${eventUrl}
+    
+    This is an exclusive invitation. Please do not share this link.
+  `;
+  
+  return await sendEmail(email, subject, html, text);
+};
+
+const sendConfirmationEmail = async (fullName, email, tier) => {
+  const subject = 'Welcome to Kinkly Berlin - Your Application is Confirmed';
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">
+      <h1 style="color: #fff; text-align: center; margin-bottom: 30px;">Kinkly Berlin</h1>
+      
+      <p>Dear ${fullName},</p>
+      
+      <p>Welcome to the inner circle. Your journey begins.</p>
+      
+      <div style="background-color: #111; padding: 20px; border-radius: 5px; margin: 20px 0;">
+        <h3 style="color: #fff; margin-top: 0;">Your Application Details:</h3>
+        <p><strong>Tier:</strong> ${tier}</p>
+        <p><strong>Status:</strong> Confirmed</p>
+      </div>
+      
+      <p>Your confirmation has been sent to your email address. We will contact you soon with further details about the event.</p>
+      
+      <p style="color: #ccc; font-size: 14px; text-align: center; margin-top: 30px;">
+        Thank you for joining Kinkly Berlin.
+      </p>
+    </div>
+  `;
+  
+  const text = `
+    Dear ${fullName},
+    
+    Welcome to the inner circle. Your journey begins.
+    
+    Your Application Details:
+    - Tier: ${tier}
+    - Status: Confirmed
+    
+    Your confirmation has been sent to your email address. We will contact you soon with further details about the event.
+    
+    Thank you for joining Kinkly Berlin.
+  `;
+  
+  return await sendEmail(email, subject, html, text);
+};
 
 
 // Database-Konfiguration
@@ -580,6 +684,49 @@ app.get('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error fetching referral codes:', error);
     res.status(500).json({ error: 'Failed to fetch referral codes' });
+  }
+});
+
+// Get all waitlist entries
+app.get('/api/admin/waitlist', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM waitlist 
+      ORDER BY created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching waitlist:', error);
+    res.status(500).json({ error: 'Failed to fetch waitlist' });
+  }
+});
+
+// Send event invite to waitlist person
+app.post('/api/admin/send-invite', authenticateAdmin, async (req, res) => {
+  try {
+    const { email, firstName, lastName, referralCode } = req.body;
+    
+    console.log('Sending invite to:', { email, firstName, lastName, referralCode });
+    
+    // Send email using Resend
+    const emailResult = await sendEventInviteEmail(email, firstName, lastName, referralCode);
+    
+    if (emailResult.success) {
+      res.json({ 
+        success: true, 
+        message: 'Invite sent successfully',
+        emailId: emailResult.data?.id
+      });
+    } else {
+      console.error('Failed to send email:', emailResult.error);
+      res.status(500).json({ 
+        error: 'Failed to send invite email',
+        details: emailResult.error
+      });
+    }
+  } catch (error) {
+    console.error('Error sending invite:', error);
+    res.status(500).json({ error: 'Failed to send invite' });
   }
 });
 
