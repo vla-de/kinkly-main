@@ -3,21 +3,37 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 interface ReferralCodeFormProps {
   onSuccess: () => void;
+  onWaitlistClick?: () => void;
 }
 
-const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess }) => {
+const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitlistClick }) => {
   const { t } = useLanguage();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const placeholderCode = 'S7'; // Placeholder for testing
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.trim().toUpperCase() === placeholderCode) {
-      setError('');
-      onSuccess();
-    } else {
-      setError(t.referral_error);
+    setError('');
+    
+    try {
+      const response = await fetch('/api/auth/validate-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.trim().toUpperCase() })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('referralCode', code.trim().toUpperCase());
+        localStorage.setItem('referrerId', data.referrerId);
+        onSuccess();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || t.referral_error);
+      }
+    } catch (err) {
+      setError('Verbindungsfehler. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -41,11 +57,22 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess }) => {
         </div>
         {error && <p className="text-red-500 text-xs text-center">{error}</p>}
         <div>
-          <button type="submit" className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider">
+          <button type="submit" className="btn-exclusive w-full bg-white text-black py-3 px-4 font-semibold tracking-wider">
             {t.referral_button}
           </button>
         </div>
       </form>
+      
+      {onWaitlistClick && (
+        <div className="mt-4 text-center">
+          <button 
+            onClick={onWaitlistClick}
+            className="text-gray-400 hover:text-white text-sm underline transition-colors"
+          >
+            Eine Einladung anfragen
+          </button>
+        </div>
+      )}
     </div>
   );
 };

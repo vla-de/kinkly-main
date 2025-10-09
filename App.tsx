@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import ExperienceSection from './components/ExperienceSection';
@@ -13,11 +13,16 @@ import PaymentSelection from './components/PaymentSelection';
 import SuccessAnimation from './components/SuccessAnimation';
 import Impressum from './components/Impressum';
 import Datenschutz from './components/Datenschutz';
+import AdminLogin from './components/AdminLogin';
+import AdminPanel from './components/AdminPanel';
+import WaitlistForm from './components/WaitlistForm';
 
 const App: React.FC = () => {
-  const [activeModal, setActiveModal] = useState<null | 'login' | 'referral' | 'ticket' | 'payment' | 'success' | 'impressum' | 'datenschutz'>(null);
+  const [activeModal, setActiveModal] = useState<null | 'login' | 'referral' | 'ticket' | 'payment' | 'success' | 'impressum' | 'datenschutz' | 'waitlist'>(null);
   const [selectedTier, setSelectedTier] = useState<{ title: string; price: string } | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   const handleOpenLogin = () => setActiveModal('login');
   const handleCloseModal = () => setActiveModal(null);
@@ -48,7 +53,29 @@ const App: React.FC = () => {
 
   const handleOpenImpressum = () => setActiveModal('impressum');
   const handleOpenDatenschutz = () => setActiveModal('datenschutz');
+  const handleOpenWaitlist = () => setActiveModal('waitlist');
 
+  // Check for admin access on component mount
+  useEffect(() => {
+    const checkAdminAccess = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const adminParam = urlParams.get('admin');
+      if (adminParam === 'true') {
+        setIsAdmin(true);
+      }
+    };
+    checkAdminAccess();
+  }, []);
+
+  const handleAdminLoginSuccess = () => {
+    setIsAdminAuthenticated(true);
+  };
+
+
+  // Show admin interface if admin access is enabled
+  if (isAdmin) {
+    return isAdminAuthenticated ? <AdminPanel /> : <AdminLogin onLoginSuccess={handleAdminLoginSuccess} />;
+  }
 
   return (
     <div className="bg-black min-h-screen text-gray-300 font-sans antialiased relative">
@@ -66,7 +93,7 @@ const App: React.FC = () => {
       </Modal>
 
       <Modal isOpen={activeModal === 'referral'} onClose={handleCloseModal}>
-        <ReferralCodeForm onSuccess={handleReferralSuccess} />
+        <ReferralCodeForm onSuccess={handleReferralSuccess} onWaitlistClick={handleOpenWaitlist} />
       </Modal>
 
       <Modal isOpen={activeModal === 'ticket'} onClose={handleCloseModal}>
@@ -91,6 +118,10 @@ const App: React.FC = () => {
 
       <Modal isOpen={activeModal === 'datenschutz'} onClose={handleCloseModal}>
         <Datenschutz />
+      </Modal>
+
+      <Modal isOpen={activeModal === 'waitlist'} onClose={handleCloseModal}>
+        <WaitlistForm onSuccess={handleCloseModal} />
       </Modal>
     </div>
   );

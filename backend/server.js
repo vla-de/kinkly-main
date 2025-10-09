@@ -63,6 +63,32 @@ const initializeDb = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS referral_codes (
+        id SERIAL PRIMARY KEY,
+        code VARCHAR(50) UNIQUE NOT NULL,
+        user_id INTEGER REFERENCES applications(id),
+        max_uses INTEGER DEFAULT 1,
+        used_count INTEGER DEFAULT 0,
+        expires_at TIMESTAMPTZ,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS event_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        remaining_tickets INTEGER DEFAULT 50,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS waitlist (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
     console.log('Database tables are ready.');
   } catch (err) {
     console.error('Error initializing database:', err);
@@ -132,6 +158,9 @@ app.post('/api/stripe-webhook', express.raw({type: 'application/json'}), verifyS
         );
         await pool.query('COMMIT');
         console.log(`Payment for application ${applicationId} recorded.`);
+        
+        // Update remaining tickets
+        await updateRemainingTickets();
         
         // Send confirmation email
         if (appResult.rows.length > 0) {
@@ -321,6 +350,9 @@ app.post('/api/paypal/capture-order', async (req, res) => {
       await pool.query('COMMIT');
       console.log(`PayPal payment for application ${applicationId} recorded.`);
 
+      // Update remaining tickets
+      await updateRemainingTickets();
+
       // Send confirmation email
        if (appResult.rows.length > 0) {
             const { full_name, email, tier } = appResult.rows[0];
@@ -336,49 +368,236 @@ app.post('/api/paypal/capture-order', async (req, res) => {
   }
 });
 
-const express = require('express');
-const { Pool } = require('pg');  // Für Postgres
-require('dotenv').config();  // Lade .env
+// Admin authentication middleware
+const authenticateAdmin = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  // Simple token validation (in production, use JWT)
+  if (token === process.env.ADMIN_TOKEN || token === 'admin123') {
+    next();
+  } else {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+};
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// DB-Pool (ersetze mit deiner Config, falls anders)
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }  // Für Render/Prod
-});
-
-// Middleware (für JSON, etc.)
-app.use(express.json());
-
-// Health-Check: Server-Status
-app.get('/health', (req, res) => {
-  res.json({ ok: true, message: 'Server is running!' });
-});
-
-// DB-Health-Check: Testet Verbindung + Query
-app.get('/db/health', async (req, res) => {
-  try {
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL environment variable is missing!');
-    }
-    const client = await pool.connect();
-    const result = await client.query('SELECT NOW()');  // Simple Test-Query
-    client.release();
-    res.json({ 
-      ok: true, 
-      message: 'DB connected successfully!', 
-      serverTime: result.rows[0].now 
-    });
-  } catch (error) {
-    console.error('DB Health Error:', error);
-    res.status(500).json({ 
-      ok: false, 
-      error: process.env.NODE_ENV === 'development' ? error.message : 'DB connection failed' 
-    });
+// Admin login endpoint
+app.post('/api/admin/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  // Simple hardcoded admin credentials (in production, use proper authentication)
+  if (username === 'admin' && password === 'kinkly2024') {
+    res.json({ token: 'admin123' });
+  } else {
+    res.status(401).json({ error: 'Invalid credentials' });
   }
 });
+
+// Admin endpoints
+app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        a.id,
+        a.full_name,
+        a.email,
+        a.created_at,
+        CASE WHEN rc.user_id IS NOT NULL THEN true ELSE false END as is_referrer,
+        COUNT(rc2.id) as referral_count
+      FROM applications a
+      LEFT JOIN referral_codes rc ON a.id = rc.user_id
+      LEFT JOIN referral_codes rc2 ON rc2.user_id = a.id
+      GROUP BY a.id, a.full_name, a.email, a.created_at, rc.user_id
+      ORDER BY a.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+app.get('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        rc.*,
+        a.full_name as owner_name
+      FROM referral_codes rc
+      LEFT JOIN applications a ON rc.user_id = a.id
+      ORDER BY rc.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching referral codes:', error);
+    res.status(500).json({ error: 'Failed to fetch referral codes' });
+  }
+});
+
+app.post('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
+  const { userId, maxUses, expiresAt } = req.body;
+  
+  try {
+    // Generate random referral code
+    const code = generateReferralCode();
+    
+    const result = await pool.query(`
+      INSERT INTO referral_codes (code, user_id, max_uses, expires_at, is_active)
+      VALUES ($1, $2, $3, $4, true)
+      RETURNING *
+    `, [code, userId, maxUses, expiresAt || null]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating referral code:', error);
+    res.status(500).json({ error: 'Failed to create referral code' });
+  }
+});
+
+app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
+  try {
+    const stats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_applications,
+        COUNT(CASE WHEN status = 'pending_payment' THEN 1 END) as pending_payments,
+        COUNT(CASE WHEN status = 'pending_review' THEN 1 END) as pending_review,
+        COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved,
+        COALESCE(SUM(p.amount), 0) as total_revenue
+      FROM applications a
+      LEFT JOIN payments p ON a.id = p.application_id
+    `);
+    
+    const scarcity = await pool.query(`
+      SELECT remaining_tickets FROM event_settings WHERE id = 1
+    `);
+    
+    res.json({
+      ...stats.rows[0],
+      remaining_tickets: scarcity.rows[0]?.remaining_tickets || 0
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+app.put('/api/admin/scarcity', authenticateAdmin, async (req, res) => {
+  const { remainingTickets } = req.body;
+  
+  try {
+    await pool.query(`
+      INSERT INTO event_settings (id, remaining_tickets)
+      VALUES (1, $1)
+      ON CONFLICT (id) DO UPDATE SET remaining_tickets = $1
+    `, [remainingTickets]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating scarcity:', error);
+    res.status(500).json({ error: 'Failed to update scarcity' });
+  }
+});
+
+// Referral code validation endpoint
+app.post('/api/auth/validate-code', async (req, res) => {
+  const { code } = req.body;
+  
+  if (!code) {
+    return res.status(400).json({ error: 'Code is required' });
+  }
+  
+  try {
+    const result = await pool.query(`
+      SELECT rc.*, a.full_name as referrer_name
+      FROM referral_codes rc
+      LEFT JOIN applications a ON rc.user_id = a.id
+      WHERE rc.code = $1 AND rc.is_active = true
+      AND (rc.expires_at IS NULL OR rc.expires_at > NOW())
+      AND rc.used_count < rc.max_uses
+    `, [code]);
+    
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Der Schlüssel passt nicht.' });
+    }
+    
+    const referralCode = result.rows[0];
+    
+    // Increment usage count
+    await pool.query(`
+      UPDATE referral_codes 
+      SET used_count = used_count + 1 
+      WHERE id = $1
+    `, [referralCode.id]);
+    
+    res.json({ 
+      valid: true, 
+      referrerId: referralCode.user_id,
+      referrerName: referralCode.referrer_name
+    });
+  } catch (error) {
+    console.error('Error validating referral code:', error);
+    res.status(500).json({ error: 'Failed to validate code' });
+  }
+});
+
+// Waitlist endpoint
+app.post('/api/waitlist', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  
+  try {
+    await pool.query(`
+      INSERT INTO waitlist (email) VALUES ($1)
+      ON CONFLICT (email) DO NOTHING
+    `, [email]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error adding to waitlist:', error);
+    res.status(500).json({ error: 'Failed to add to waitlist' });
+  }
+});
+
+// Event status endpoint (public)
+app.get('/api/events/status', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT remaining_tickets FROM event_settings WHERE id = 1
+    `);
+    
+    const remainingTickets = result.rows[0]?.remaining_tickets || 50;
+    res.json({ remainingTickets });
+  } catch (error) {
+    console.error('Error fetching event status:', error);
+    res.status(500).json({ error: 'Failed to fetch event status' });
+  }
+});
+
+// Update remaining tickets when payment is successful
+const updateRemainingTickets = async () => {
+  try {
+    await pool.query(`
+      UPDATE event_settings 
+      SET remaining_tickets = GREATEST(remaining_tickets - 1, 0), updated_at = NOW()
+      WHERE id = 1
+    `);
+  } catch (error) {
+    console.error('Error updating remaining tickets:', error);
+  }
+};
+
+// Helper function to generate referral codes
+const generateReferralCode = () => {
+  const words = ['LATEX', 'SILK', 'VELVET', 'LEATHER', 'CHAIN', 'ROPE', 'CANDLE', 'MASK', 'CORSET', 'GLOVE'];
+  const word = words[Math.floor(Math.random() * words.length)];
+  const number = Math.floor(Math.random() * 900) + 100; // 100-999
+  return `${word}${number}`;
+};
 
 // 6. Server starten
 app.listen(PORT, () => {
