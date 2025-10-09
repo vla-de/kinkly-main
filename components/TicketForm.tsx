@@ -23,8 +23,10 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
       lastName: formData.get('lastName') as string,
       email: formData.get('email') as string,
       message: formData.get('message') as string,
-      tier: selectedTier?.title || 'Unknown',
+      tier: selectedTier?.title || 'The Invitation', // Default to a valid tier
     };
+    
+    console.log('Submitting data:', data); // Debug log
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/applications`, {

@@ -717,7 +717,7 @@ app.get('/api/events/status', async (req, res) => {
 });
 
 // Update remaining tickets when payment is successful
-const updateRemainingTickets = async (tier: string) => {
+const updateRemainingTickets = async (tier) => {
   try {
     let column = 'invitation_tickets'; // default
     if (tier === 'The Circle') column = 'circle_tickets';
