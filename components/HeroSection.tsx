@@ -25,13 +25,13 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onTicketClick }) => {
         </p>
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4 md:gap-6">
           <div className="flex flex-col items-center">
-            <button onClick={onTicketClick} className="w-full sm:w-auto bg-transparent border border-gray-400 text-white py-3 px-8 hover:bg-white hover:text-black transition-all duration-300 tracking-wider transform hover:scale-105">
+            <button onClick={onTicketClick} className="btn-exclusive w-full sm:w-auto bg-transparent border border-gray-400 text-white py-3 px-8 hover:bg-white hover:text-black tracking-wider">
               {t.hero_button_primary}
             </button>
             <span className="text-xs text-gray-500 mt-2">{t.hero_button_primary_note}</span>
           </div>
           <div className="flex flex-col items-center">
-            <a href="#membership" onClick={(e) => { e.preventDefault(); document.querySelector('#membership')?.scrollIntoView({ behavior: 'smooth' }); }} className="w-full sm:w-auto bg-gray-200 text-black py-3 px-8 hover:bg-gray-300 transition-all duration-300 tracking-wider transform hover:scale-105 inline-block">
+            <a href="#membership" onClick={(e) => { e.preventDefault(); document.querySelector('#membership')?.scrollIntoView({ behavior: 'smooth' }); }} className="btn-exclusive w-full sm:w-auto bg-gray-200 text-black py-3 px-8 hover:bg-gray-300 tracking-wider inline-block">
               {t.hero_button_secondary}
             </a>
             <span className="text-xs text-gray-500 mt-2">{t.hero_button_secondary_note}</span>

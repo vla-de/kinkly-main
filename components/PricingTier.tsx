@@ -17,7 +17,7 @@ const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, fe
       : 'bg-black border-gray-800'
   }`;
 
-  const buttonClasses = `mt-auto w-full py-3 px-8 tracking-wider font-semibold transition-all duration-300 rounded-md ${
+  const buttonClasses = `btn-exclusive mt-auto w-full py-3 px-8 tracking-wider font-semibold rounded-md ${
     isFeatured
       ? 'bg-white text-black hover:bg-gray-200'
       : 'bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-800 hover:border-gray-500'
