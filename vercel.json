@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://kinkly-backend.onrender.com/$1"
+      "destination": "https://kinkly-backend.onrender.com/api/$1"
     }
   ]
 }
