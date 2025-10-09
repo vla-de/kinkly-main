@@ -44,7 +44,8 @@ const initializeDb = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS applications (
         id SERIAL PRIMARY KEY,
-        full_name VARCHAR(255) NOT NULL,
+        first_name VARCHAR(255) NOT NULL,
+        last_name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL,
         message TEXT,
         tier VARCHAR(100) NOT NULL,
@@ -78,7 +79,9 @@ const initializeDb = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS event_settings (
         id INTEGER PRIMARY KEY DEFAULT 1,
-        remaining_tickets INTEGER DEFAULT 50,
+        invitation_tickets INTEGER DEFAULT 20,
+        circle_tickets INTEGER DEFAULT 15,
+        sanctum_tickets INTEGER DEFAULT 10,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
@@ -153,19 +156,19 @@ app.post('/api/stripe-webhook', express.raw({type: 'application/json'}), verifyS
           [applicationId, paymentIntent.id, paymentIntent.amount, paymentIntent.status]
         );
         const appResult = await pool.query(
-          "UPDATE applications SET status = 'pending_review' WHERE id = $1 RETURNING full_name, email, tier",
+          "UPDATE applications SET status = 'pending_review' WHERE id = $1 RETURNING first_name, last_name, email, tier",
           [applicationId]
         );
         await pool.query('COMMIT');
         console.log(`Payment for application ${applicationId} recorded.`);
         
         // Update remaining tickets
-        await updateRemainingTickets();
+        await updateRemainingTickets(tier);
         
         // Send confirmation email
         if (appResult.rows.length > 0) {
-            const { full_name, email, tier } = appResult.rows[0];
-            await sendConfirmationEmail(full_name, email, tier);
+            const { first_name, last_name, email, tier } = appResult.rows[0];
+            await sendConfirmationEmail(`${first_name} ${last_name}`, email, tier);
         }
 
       } catch (err) {
@@ -241,17 +244,17 @@ app.get('/db/health', async (req, res) => {
 
 // Create a new application
 app.post('/api/applications', async (req, res) => {
-  const { fullName, email, message, tier } = req.body;
-  if (!fullName || !email || !tier) {
-    return res.status(400).json({ error: 'Full name, email, and tier are required.' });
+  const { firstName, lastName, email, message, tier } = req.body;
+  if (!firstName || !lastName || !email || !tier) {
+    return res.status(400).json({ error: 'First name, last name, email, and tier are required.' });
   }
   try {
     if (!pool) {
       throw new Error('Database is not configured. Set DATABASE_URL in environment.');
     }
     const result = await pool.query(
-      'INSERT INTO applications (full_name, email, message, tier) VALUES ($1, $2, $3, $4) RETURNING id',
-      [fullName, email, message || null, tier]
+      'INSERT INTO applications (first_name, last_name, email, message, tier) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [firstName, lastName, email, message || null, tier]
     );
     res.status(201).json({ applicationId: result.rows[0].id });
   } catch (error) {
@@ -344,19 +347,19 @@ app.post('/api/paypal/capture-order', async (req, res) => {
         [applicationId, captureResult.id, amountInCents, captureResult.status.toLowerCase()]
       );
       const appResult = await pool.query(
-        "UPDATE applications SET status = 'pending_review' WHERE id = $1 RETURNING full_name, email, tier",
+        "UPDATE applications SET status = 'pending_review' WHERE id = $1 RETURNING first_name, last_name, email, tier",
         [applicationId]
       );
       await pool.query('COMMIT');
       console.log(`PayPal payment for application ${applicationId} recorded.`);
 
       // Update remaining tickets
-      await updateRemainingTickets();
+      await updateRemainingTickets(tier);
 
       // Send confirmation email
        if (appResult.rows.length > 0) {
-            const { full_name, email, tier } = appResult.rows[0];
-            await sendConfirmationEmail(full_name, email, tier);
+            const { first_name, last_name, email, tier } = appResult.rows[0];
+            await sendConfirmationEmail(`${first_name} ${last_name}`, email, tier);
         }
     }
 
@@ -406,15 +409,19 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
     const result = await pool.query(`
       SELECT 
         a.id,
-        a.full_name,
+        a.first_name,
+        a.last_name,
         a.email,
+        a.message,
+        a.tier,
+        a.status,
         a.created_at,
         CASE WHEN rc.user_id IS NOT NULL THEN true ELSE false END as is_referrer,
         COUNT(rc2.id) as referral_count
       FROM applications a
       LEFT JOIN referral_codes rc ON a.id = rc.user_id
       LEFT JOIN referral_codes rc2 ON rc2.user_id = a.id
-      GROUP BY a.id, a.full_name, a.email, a.created_at, rc.user_id
+      GROUP BY a.id, a.first_name, a.last_name, a.email, a.message, a.tier, a.status, a.created_at, rc.user_id
       ORDER BY a.created_at DESC
     `);
     res.json(result.rows);
@@ -424,12 +431,49 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Create new user
+app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
+  const { firstName, lastName, email, message, tier } = req.body;
+  
+  if (!firstName || !lastName || !email || !tier) {
+    return res.status(400).json({ error: 'First name, last name, email, and tier are required' });
+  }
+  
+  try {
+    const result = await pool.query(
+      'INSERT INTO applications (first_name, last_name, email, message, tier, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [firstName, lastName, email, message || null, tier, 'pending_review']
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// Update user
+app.put('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { firstName, lastName, email, message, tier, status } = req.body;
+  
+  try {
+    const result = await pool.query(
+      'UPDATE applications SET first_name = $1, last_name = $2, email = $3, message = $4, tier = $5, status = $6 WHERE id = $7 RETURNING *',
+      [firstName, lastName, email, message || null, tier, status || 'pending_review', id]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
 app.get('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
         rc.*,
-        a.full_name as owner_name
+        CONCAT(a.first_name, ' ', a.last_name) as owner_name
       FROM referral_codes rc
       LEFT JOIN applications a ON rc.user_id = a.id
       ORDER BY rc.created_at DESC
@@ -461,6 +505,45 @@ app.post('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Update referral code
+app.put('/api/admin/referral-codes/:id', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { maxUses, expiresAt, isActive } = req.body;
+  
+  try {
+    const result = await pool.query(`
+      UPDATE referral_codes 
+      SET max_uses = $1, expires_at = $2, is_active = $3
+      WHERE id = $4
+      RETURNING *
+    `, [maxUses, expiresAt || null, isActive, id]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating referral code:', error);
+    res.status(500).json({ error: 'Failed to update referral code' });
+  }
+});
+
+// Deactivate referral code
+app.put('/api/admin/referral-codes/:id/deactivate', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const result = await pool.query(`
+      UPDATE referral_codes 
+      SET is_active = false
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error deactivating referral code:', error);
+    res.status(500).json({ error: 'Failed to deactivate referral code' });
+  }
+});
+
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
     const stats = await pool.query(`
@@ -475,12 +558,14 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     `);
     
     const scarcity = await pool.query(`
-      SELECT remaining_tickets FROM event_settings WHERE id = 1
+      SELECT invitation_tickets, circle_tickets, sanctum_tickets FROM event_settings WHERE id = 1
     `);
     
     res.json({
       ...stats.rows[0],
-      remaining_tickets: scarcity.rows[0]?.remaining_tickets || 0
+      invitation_tickets: scarcity.rows[0]?.invitation_tickets || 20,
+      circle_tickets: scarcity.rows[0]?.circle_tickets || 15,
+      sanctum_tickets: scarcity.rows[0]?.sanctum_tickets || 10
     });
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -489,14 +574,18 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
 });
 
 app.put('/api/admin/scarcity', authenticateAdmin, async (req, res) => {
-  const { remainingTickets } = req.body;
+  const { invitationTickets, circleTickets, sanctumTickets } = req.body;
   
   try {
     await pool.query(`
-      INSERT INTO event_settings (id, remaining_tickets)
-      VALUES (1, $1)
-      ON CONFLICT (id) DO UPDATE SET remaining_tickets = $1
-    `, [remainingTickets]);
+      INSERT INTO event_settings (id, invitation_tickets, circle_tickets, sanctum_tickets)
+      VALUES (1, $1, $2, $3)
+      ON CONFLICT (id) DO UPDATE SET 
+        invitation_tickets = $1,
+        circle_tickets = $2,
+        sanctum_tickets = $3,
+        updated_at = NOW()
+    `, [invitationTickets, circleTickets, sanctumTickets]);
     
     res.json({ success: true });
   } catch (error) {
@@ -515,7 +604,7 @@ app.post('/api/auth/validate-code', async (req, res) => {
   
   try {
     const result = await pool.query(`
-      SELECT rc.*, a.full_name as referrer_name
+      SELECT rc.*, CONCAT(a.first_name, ' ', a.last_name) as referrer_name
       FROM referral_codes rc
       LEFT JOIN applications a ON rc.user_id = a.id
       WHERE rc.code = $1 AND rc.is_active = true
@@ -572,11 +661,16 @@ app.post('/api/waitlist', async (req, res) => {
 app.get('/api/events/status', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT remaining_tickets FROM event_settings WHERE id = 1
+      SELECT invitation_tickets, circle_tickets, sanctum_tickets FROM event_settings WHERE id = 1
     `);
     
-    const remainingTickets = result.rows[0]?.remaining_tickets || 50;
-    res.json({ remainingTickets });
+    const tickets = result.rows[0] || { invitation_tickets: 20, circle_tickets: 15, sanctum_tickets: 10 };
+    res.json({ 
+      invitationTickets: tickets.invitation_tickets,
+      circleTickets: tickets.circle_tickets,
+      sanctumTickets: tickets.sanctum_tickets,
+      totalTickets: tickets.invitation_tickets + tickets.circle_tickets + tickets.sanctum_tickets
+    });
   } catch (error) {
     console.error('Error fetching event status:', error);
     res.status(500).json({ error: 'Failed to fetch event status' });
@@ -584,11 +678,15 @@ app.get('/api/events/status', async (req, res) => {
 });
 
 // Update remaining tickets when payment is successful
-const updateRemainingTickets = async () => {
+const updateRemainingTickets = async (tier: string) => {
   try {
+    let column = 'invitation_tickets'; // default
+    if (tier === 'The Circle') column = 'circle_tickets';
+    else if (tier === 'The Inner Sanctum') column = 'sanctum_tickets';
+    
     await pool.query(`
       UPDATE event_settings 
-      SET remaining_tickets = GREATEST(remaining_tickets - 1, 0), updated_at = NOW()
+      SET ${column} = GREATEST(${column} - 1, 0), updated_at = NOW()
       WHERE id = 1
     `);
   } catch (error) {

@@ -18,8 +18,14 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
     setError('');
 
     const formData = new FormData(e.currentTarget);
+    const fullName = formData.get('name') as string;
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
     const data = {
-      fullName: formData.get('name') as string,
+      firstName,
+      lastName,
       email: formData.get('email') as string,
       message: formData.get('message') as string,
       tier: selectedTier?.title || 'Unknown',

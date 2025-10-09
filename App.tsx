@@ -58,9 +58,8 @@ const App: React.FC = () => {
   // Check for admin access on component mount
   useEffect(() => {
     const checkAdminAccess = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const adminParam = urlParams.get('admin');
-      if (adminParam === 'true') {
+      const path = window.location.pathname;
+      if (path === '/admin') {
         setIsAdmin(true);
       }
     };

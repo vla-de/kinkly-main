@@ -3,8 +3,12 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 interface User {
   id: number;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   email: string;
+  message?: string;
+  tier: string;
+  status: string;
   is_referrer: boolean;
   created_at: string;
   referral_count?: number;
@@ -19,6 +23,7 @@ interface ReferralCode {
   expires_at: string | null;
   is_active: boolean;
   created_at: string;
+  owner_name: string;
 }
 
 interface EventStats {
@@ -27,7 +32,9 @@ interface EventStats {
   pending_review: number;
   approved: number;
   total_revenue: number;
-  remaining_tickets: number;
+  invitation_tickets: number;
+  circle_tickets: number;
+  sanctum_tickets: number;
 }
 
 const AdminPanel: React.FC = () => {
@@ -38,6 +45,8 @@ const AdminPanel: React.FC = () => {
   const [stats, setStats] = useState<EventStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showNewUserForm, setShowNewUserForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // Fetch data based on active tab
   useEffect(() => {
@@ -103,7 +112,7 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const updateScarcity = async (remainingTickets: number) => {
+  const updateScarcity = async (invitationTickets: number, circleTickets: number, sanctumTickets: number) => {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await fetch('/api/admin/scarcity', {
@@ -112,13 +121,90 @@ const AdminPanel: React.FC = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify({ remainingTickets })
+        body: JSON.stringify({ invitationTickets, circleTickets, sanctumTickets })
       });
       if (response.ok) {
         fetchData(); // Refresh data
       }
     } catch (err) {
       console.error('Error updating scarcity:', err);
+    }
+  };
+
+  const createUser = async (userData: { firstName: string; lastName: string; email: string; message?: string; tier: string }) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(userData)
+      });
+      if (response.ok) {
+        setShowNewUserForm(false);
+        fetchData(); // Refresh data
+      }
+    } catch (err) {
+      console.error('Error creating user:', err);
+    }
+  };
+
+  const updateUser = async (userId: number, userData: { firstName: string; lastName: string; email: string; message?: string; tier: string }) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify(userData)
+      });
+      if (response.ok) {
+        setEditingUser(null);
+        fetchData(); // Refresh data
+      }
+    } catch (err) {
+      console.error('Error updating user:', err);
+    }
+  };
+
+  const updateReferralCode = async (codeId: number, maxUses: number, expiresAt?: string, isActive?: boolean) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/referral-codes/${codeId}`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ maxUses, expiresAt, isActive })
+      });
+      if (response.ok) {
+        fetchData(); // Refresh data
+      }
+    } catch (err) {
+      console.error('Error updating referral code:', err);
+    }
+  };
+
+  const deactivateReferralCode = async (codeId: number) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/referral-codes/${codeId}/deactivate`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        }
+      });
+      if (response.ok) {
+        fetchData(); // Refresh data
+      }
+    } catch (err) {
+      console.error('Error deactivating referral code:', err);
     }
   };
 
@@ -168,15 +254,24 @@ const AdminPanel: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-serif-display text-2xl text-white">Users</h2>
-                <button className="btn-exclusive bg-white text-black px-4 py-2 text-sm">
-                  Export Users
-                </button>
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={() => setShowNewUserForm(true)}
+                    className="btn-exclusive bg-green-600 hover:bg-green-700 text-white px-4 py-2 text-sm"
+                  >
+                    New User
+                  </button>
+                  <button className="btn-exclusive bg-white text-black px-4 py-2 text-sm">
+                    Export Users
+                  </button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-700">
-                      <th className="text-left py-3 px-4">Name</th>
+                      <th className="text-left py-3 px-4">First Name</th>
+                      <th className="text-left py-3 px-4">Last Name</th>
                       <th className="text-left py-3 px-4">Email</th>
                       <th className="text-left py-3 px-4">Type</th>
                       <th className="text-left py-3 px-4">Referrals</th>
@@ -187,7 +282,8 @@ const AdminPanel: React.FC = () => {
                   <tbody>
                     {users.map(user => (
                       <tr key={user.id} className="border-b border-gray-800 hover:bg-gray-800">
-                        <td className="py-3 px-4">{user.full_name}</td>
+                        <td className="py-3 px-4">{user.first_name}</td>
+                        <td className="py-3 px-4">{user.last_name}</td>
                         <td className="py-3 px-4">{user.email}</td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded text-xs ${
@@ -199,12 +295,20 @@ const AdminPanel: React.FC = () => {
                         <td className="py-3 px-4">{user.referral_count || 0}</td>
                         <td className="py-3 px-4">{new Date(user.created_at).toLocaleDateString()}</td>
                         <td className="py-3 px-4">
-                          <button 
-                            onClick={() => createReferralCode(user.id, 10)}
-                            className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs"
-                          >
-                            Create Code
-                          </button>
+                          <div className="flex space-x-1">
+                            <button 
+                              onClick={() => setEditingUser(user)}
+                              className="btn-exclusive bg-blue-600 hover:bg-blue-700 px-3 py-1 text-xs"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => createReferralCode(user.id, 10)}
+                              className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs"
+                            >
+                              Create Code
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -219,7 +323,15 @@ const AdminPanel: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-serif-display text-2xl text-white">Referral Codes</h2>
-                <button className="btn-exclusive bg-white text-black px-4 py-2 text-sm">
+                <button 
+                  onClick={() => {
+                    const userId = prompt('Enter User ID to generate code for:');
+                    if (userId) {
+                      createReferralCode(parseInt(userId), 10);
+                    }
+                  }}
+                  className="btn-exclusive bg-white text-black px-4 py-2 text-sm"
+                >
                   Generate Code
                 </button>
               </div>
@@ -240,7 +352,7 @@ const AdminPanel: React.FC = () => {
                     {referralCodes.map(code => (
                       <tr key={code.id} className="border-b border-gray-800 hover:bg-gray-800">
                         <td className="py-3 px-4 font-mono">{code.code}</td>
-                        <td className="py-3 px-4">{code.user_id}</td>
+                        <td className="py-3 px-4">{code.owner_name || 'Unknown'}</td>
                         <td className="py-3 px-4">{code.used_count}</td>
                         <td className="py-3 px-4">{code.max_uses}</td>
                         <td className="py-3 px-4">{code.expires_at ? new Date(code.expires_at).toLocaleDateString() : 'Never'}</td>
@@ -252,10 +364,26 @@ const AdminPanel: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <button className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs mr-2">
+                          <button 
+                            onClick={() => {
+                              const maxUses = prompt('Enter new max uses:', code.max_uses.toString());
+                              const expiresAt = prompt('Enter expiration date (YYYY-MM-DD) or leave empty:', code.expires_at ? code.expires_at.split('T')[0] : '');
+                              if (maxUses) {
+                                updateReferralCode(code.id, parseInt(maxUses), expiresAt || undefined);
+                              }
+                            }}
+                            className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs mr-2"
+                          >
                             Edit
                           </button>
-                          <button className="btn-exclusive bg-red-700 hover:bg-red-600 px-3 py-1 text-xs">
+                          <button 
+                            onClick={() => {
+                              if (confirm('Are you sure you want to deactivate this code?')) {
+                                deactivateReferralCode(code.id);
+                              }
+                            }}
+                            className="btn-exclusive bg-red-700 hover:bg-red-600 px-3 py-1 text-xs"
+                          >
                             Deactivate
                           </button>
                         </td>
@@ -296,31 +424,203 @@ const AdminPanel: React.FC = () => {
           {activeTab === 'scarcity' && !loading && (
             <div>
               <h2 className="font-serif-display text-2xl text-white mb-6">Scarcity Management</h2>
-              <div className="bg-gray-800 p-6 rounded-lg">
-                <div className="flex items-center space-x-4 mb-4">
-                  <label className="text-white font-medium">Remaining Tickets:</label>
-                  <input
-                    type="number"
-                    value={stats?.remaining_tickets || 0}
-                    onChange={(e) => setStats(prev => prev ? {...prev, remaining_tickets: parseInt(e.target.value)} : null)}
-                    className="bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
-                  />
+              <div className="bg-gray-800 p-6 rounded-lg space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="text-white font-medium block mb-2">The Invitation Tickets:</label>
+                    <input
+                      type="number"
+                      value={stats?.invitation_tickets || 0}
+                      onChange={(e) => setStats(prev => prev ? {...prev, invitation_tickets: parseInt(e.target.value)} : null)}
+                      className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white font-medium block mb-2">The Circle Tickets:</label>
+                    <input
+                      type="number"
+                      value={stats?.circle_tickets || 0}
+                      onChange={(e) => setStats(prev => prev ? {...prev, circle_tickets: parseInt(e.target.value)} : null)}
+                      className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-white font-medium block mb-2">The Inner Sanctum Tickets:</label>
+                    <input
+                      type="number"
+                      value={stats?.sanctum_tickets || 0}
+                      onChange={(e) => setStats(prev => prev ? {...prev, sanctum_tickets: parseInt(e.target.value)} : null)}
+                      className="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end">
                   <button 
-                    onClick={() => stats && updateScarcity(stats.remaining_tickets)}
-                    className="btn-exclusive bg-white text-black px-4 py-2"
+                    onClick={() => stats && updateScarcity(stats.invitation_tickets, stats.circle_tickets, stats.sanctum_tickets)}
+                    className="btn-exclusive bg-white text-black px-6 py-2"
                   >
-                    Update
+                    Update All Tickets
                   </button>
                 </div>
                 <p className="text-gray-400 text-sm">
-                  This number will be displayed to users to create urgency. 
-                  It decreases automatically when tickets are purchased.
+                  These numbers will be displayed to users to create urgency. 
+                  They decrease automatically when tickets are purchased for each tier.
                 </p>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* New User Modal */}
+      {showNewUserForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-96">
+            <h3 className="text-xl font-bold text-white mb-4">Create New User</h3>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget as HTMLFormElement);
+              createUser({
+                firstName: formData.get('firstName') as string,
+                lastName: formData.get('lastName') as string,
+                email: formData.get('email') as string,
+                message: formData.get('message') as string,
+                tier: formData.get('tier') as string
+              });
+            }}>
+              <div className="space-y-4">
+                <input
+                  name="firstName"
+                  placeholder="First Name"
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                />
+                <input
+                  name="lastName"
+                  placeholder="Last Name"
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                />
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="Email"
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                />
+                <select
+                  name="tier"
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                >
+                  <option value="">Select Tier</option>
+                  <option value="The Invitation">The Invitation</option>
+                  <option value="The Circle">The Circle</option>
+                  <option value="The Inner Sanctum">The Inner Sanctum</option>
+                </select>
+                <textarea
+                  name="message"
+                  placeholder="Message (optional)"
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end space-x-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowNewUserForm(false)}
+                  className="btn-exclusive bg-gray-600 hover:bg-gray-700 px-4 py-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-exclusive bg-green-600 hover:bg-green-700 px-4 py-2"
+                >
+                  Create User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-96">
+            <h3 className="text-xl font-bold text-white mb-4">Edit User</h3>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget as HTMLFormElement);
+              updateUser(editingUser.id, {
+                firstName: formData.get('firstName') as string,
+                lastName: formData.get('lastName') as string,
+                email: formData.get('email') as string,
+                message: formData.get('message') as string,
+                tier: formData.get('tier') as string
+              });
+            }}>
+              <div className="space-y-4">
+                <input
+                  name="firstName"
+                  defaultValue={editingUser.first_name}
+                  placeholder="First Name"
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                />
+                <input
+                  name="lastName"
+                  defaultValue={editingUser.last_name}
+                  placeholder="Last Name"
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                />
+                <input
+                  name="email"
+                  type="email"
+                  defaultValue={editingUser.email}
+                  placeholder="Email"
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                />
+                <select
+                  name="tier"
+                  defaultValue={editingUser.tier}
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                >
+                  <option value="The Invitation">The Invitation</option>
+                  <option value="The Circle">The Circle</option>
+                  <option value="The Inner Sanctum">The Inner Sanctum</option>
+                </select>
+                <textarea
+                  name="message"
+                  defaultValue={editingUser.message || ''}
+                  placeholder="Message (optional)"
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end space-x-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="btn-exclusive bg-gray-600 hover:bg-gray-700 px-4 py-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-exclusive bg-blue-600 hover:bg-blue-700 px-4 py-2"
+                >
+                  Update User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
