@@ -127,7 +127,10 @@ const initializeDb = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS waitlist (
         id SERIAL PRIMARY KEY,
+        first_name VARCHAR(255) NOT NULL,
+        last_name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
+        referral_code VARCHAR(50),
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
@@ -677,19 +680,28 @@ app.post('/api/auth/validate-code', async (req, res) => {
 
 // Waitlist endpoint
 app.post('/api/waitlist', async (req, res) => {
-  const { email } = req.body;
+  const { firstName, lastName, email, referralCode } = req.body;
   
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
+  if (!firstName || !lastName || !email) {
+    return res.status(400).json({ error: 'First name, last name, and email are required' });
   }
   
   try {
-    await pool.query(`
-      INSERT INTO waitlist (email) VALUES ($1)
-      ON CONFLICT (email) DO NOTHING
-    `, [email]);
+    const result = await pool.query(`
+      INSERT INTO waitlist (first_name, last_name, email, referral_code) 
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (email) DO UPDATE SET
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        referral_code = EXCLUDED.referral_code
+      RETURNING *
+    `, [firstName, lastName, email, referralCode || null]);
     
-    res.json({ success: true });
+    res.json({ 
+      success: true, 
+      hasReferralCode: !!referralCode,
+      referralCode: referralCode 
+    });
   } catch (error) {
     console.error('Error adding to waitlist:', error);
     res.status(500).json({ error: 'Failed to add to waitlist' });

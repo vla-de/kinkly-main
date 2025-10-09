@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ReferralCodeFormProps {
@@ -11,6 +11,41 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitli
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const placeholderCode = 'S7'; // Placeholder for testing
+
+  // Load referral code from sessionStorage on component mount
+  useEffect(() => {
+    const storedCode = sessionStorage.getItem('referralCode');
+    if (storedCode) {
+      setCode(storedCode);
+      // Automatically validate and proceed if code is found
+      handleAutoValidation(storedCode);
+    }
+  }, []);
+
+  const handleAutoValidation = async (codeToValidate: string) => {
+    try {
+      const response = await fetch('/api/auth/validate-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: codeToValidate.trim().toUpperCase() })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('referralCode', codeToValidate.trim().toUpperCase());
+        localStorage.setItem('referrerId', data.referrerId);
+        onSuccess();
+      } else {
+        // If auto-validation fails, clear the stored code
+        sessionStorage.removeItem('referralCode');
+        setCode('');
+      }
+    } catch (err) {
+      // If auto-validation fails, clear the stored code
+      sessionStorage.removeItem('referralCode');
+      setCode('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import PricingTier from './PricingTier';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -8,6 +8,20 @@ interface MembershipSectionProps {
 
 const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) => {
   const { t } = useLanguage();
+
+  // Extract referral code from URL and store in sessionStorage
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const referralCode = urlParams.get('ref');
+    
+    if (referralCode) {
+      sessionStorage.setItem('referralCode', referralCode);
+      // Clean up URL by removing the ref parameter
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('ref');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, []);
 
   return (
     <section id="membership" className="py-20 md:py-32 bg-black">
