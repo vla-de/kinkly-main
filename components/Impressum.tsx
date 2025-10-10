@@ -10,21 +10,28 @@ const Impressum: React.FC = () => {
       
       <div className="space-y-4">
         <h3 className="font-bold text-white">Angaben gemäß § 5 TMG</h3>
+        <div className="bg-gray-800 p-4 rounded-md mb-4">
+          <p>
+            K | PRODUKTION<br />
+            Bayreuther Straße 36<br />
+            10789 Berlin<br />
+            Deutschland
+          </p>
+        </div>
+
+        <h3 className="font-bold text-white">Geschäftsführung</h3>
         <p>
-          Max Mustermann (Platzhalter)<br />
-          Musterstraße 111<br />
-          10115 Berlin
+          Jenny Westphal
         </p>
 
         <h3 className="font-bold text-white">Kontakt</h3>
         <p>
-          Telefon: +49 (0) 30 1234567 (Platzhalter)<br />
-          E-Mail: contact@kinkly.eu (Platzhalter)
+          E-Mail: contact@k-production.eu
         </p>
 
         <h3 className="font-bold text-white">Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h3>
         <p>
-          Maxi Musterfrau (Platzhalter)<br />
+          Jenny Westphal<br />
           Anschrift wie oben
         </p>
 

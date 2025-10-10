@@ -4,6 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 interface FooterProps {
   onImpressumClick: () => void;
   onDatenschutzClick: () => void;
+  onAGBClick: () => void;
 }
 
 const InstagramIcon: React.FC = () => (
@@ -15,7 +16,7 @@ const InstagramIcon: React.FC = () => (
 );
 
 
-const Footer: React.FC<FooterProps> = ({ onImpressumClick, onDatenschutzClick }) => {
+const Footer: React.FC<FooterProps> = ({ onImpressumClick, onDatenschutzClick, onAGBClick }) => {
   const { t } = useLanguage();
   return (
     <footer className="bg-black py-8">
@@ -32,6 +33,8 @@ const Footer: React.FC<FooterProps> = ({ onImpressumClick, onDatenschutzClick })
           <button onClick={onImpressumClick} className="hover:text-gray-400 underline">{t.footer_impressum}</button>
           <span className="mx-2">|</span>
           <button onClick={onDatenschutzClick} className="hover:text-gray-400 underline">{t.footer_datenschutz}</button>
+          <span className="mx-2">|</span>
+          <button onClick={onAGBClick} className="hover:text-gray-400 underline">AGB</button>
         </div>
       </div>
     </footer>

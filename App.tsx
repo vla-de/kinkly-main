@@ -13,12 +13,14 @@ import PaymentSelection from './components/PaymentSelection';
 import SuccessAnimation from './components/SuccessAnimation';
 import Impressum from './components/Impressum';
 import Datenschutz from './components/Datenschutz';
+import AGB from './components/AGB';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import WaitlistForm from './components/WaitlistForm';
+import CookieConsent from './components/CookieConsent';
 
 const App: React.FC = () => {
-  const [activeModal, setActiveModal] = useState<null | 'login' | 'referral' | 'ticket' | 'payment' | 'success' | 'impressum' | 'datenschutz' | 'waitlist'>(null);
+  const [activeModal, setActiveModal] = useState<null | 'login' | 'referral' | 'ticket' | 'payment' | 'success' | 'impressum' | 'datenschutz' | 'agb' | 'waitlist'>(null);
   const [selectedTier, setSelectedTier] = useState<{ title: string; price: string } | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -85,7 +87,7 @@ const App: React.FC = () => {
         <MembershipSection onTierSelect={handleTierSelect} />
         <NextEventSection onTicketClick={handleOpenReferral} />
       </main>
-      <Footer onImpressumClick={handleOpenImpressum} onDatenschutzClick={handleOpenDatenschutz} />
+      <Footer onImpressumClick={handleOpenImpressum} onDatenschutzClick={handleOpenDatenschutz} onAGBClick={() => setActiveModal('agb')} />
 
       <Modal isOpen={activeModal === 'login'} onClose={handleCloseModal}>
         <LoginForm />
@@ -119,9 +121,18 @@ const App: React.FC = () => {
         <Datenschutz />
       </Modal>
 
+      <Modal isOpen={activeModal === 'agb'} onClose={handleCloseModal}>
+        <AGB />
+      </Modal>
+
       <Modal isOpen={activeModal === 'waitlist'} onClose={handleCloseModal}>
         <WaitlistForm onSuccess={handleCloseModal} />
       </Modal>
+      
+      <CookieConsent 
+        onAccept={() => console.log('Cookies accepted')}
+        onDecline={() => console.log('Cookies declined')}
+      />
     </div>
   );
 };
