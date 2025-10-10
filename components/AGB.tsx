@@ -93,9 +93,21 @@ const AGB: React.FC = () => {
 
         <h3 className="font-bold text-white">§ 10 Bild- und Tonaufnahmen</h3>
         <p>
-          Der Veranstalter behält sich das Recht vor, während des Events Bild- und Tonaufnahmen zu erstellen. 
-          Mit der Teilnahme erklärt sich der Teilnehmer damit einverstanden, dass diese Aufnahmen für 
-          Marketingzwecke verwendet werden dürfen.
+          <strong>Datenschutz und Diskretion:</strong><br />
+          Als hoch exklusiver Club legen wir größten Wert auf die Privatsphäre und Diskretion unserer Mitglieder. 
+          Alle Kameras und Aufnahmegeräte müssen am Eingang abgegeben werden. Circle-Mitglieder erhalten 
+          ein spezielles Kommunikationsgerät ohne Foto-/Videofunktion.
+        </p>
+        <p>
+          <strong>Professionelle Dokumentation:</strong><br />
+          Eventuelle professionelle Aufnahmen erfolgen ausschließlich in maskierter und unkenntlicher Form. 
+          Personenbezogene Zuordnungen sind ausgeschlossen. Alle Aufnahmen unterliegen strengen 
+          Datenschutzbestimmungen und werden nur für interne Zwecke verwendet.
+        </p>
+        <p>
+          <strong>Einverständniserklärung:</strong><br />
+          Mit der Teilnahme erklären Sie sich einverstanden, dass eventuelle professionelle Aufnahmen 
+          in anonymisierter Form für interne Dokumentationszwecke verwendet werden dürfen.
         </p>
 
         <h3 className="font-bold text-white">§ 11 Schlussbestimmungen</h3>

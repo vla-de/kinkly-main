@@ -36,9 +36,16 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onAccept, onDecline }) =>
         <div className="flex-1">
           <p className="text-white text-sm">
             Wir verwenden Cookies, um Ihnen die beste Erfahrung zu bieten. Durch die Nutzung unserer Website stimmen Sie der Verwendung von Cookies zu. 
-            <a href="/datenschutz" className="text-gray-300 underline hover:text-white ml-1">
+            <button 
+              onClick={() => {
+                // Trigger datenschutz modal
+                const event = new CustomEvent('openModal', { detail: 'datenschutz' });
+                window.dispatchEvent(event);
+              }}
+              className="text-gray-300 underline hover:text-white ml-1"
+            >
               Mehr erfahren
-            </a>
+            </button>
           </p>
         </div>
         <div className="flex gap-3">

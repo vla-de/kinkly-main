@@ -372,11 +372,13 @@ const verifyStripeSignature = (req, res, next) => {
 // Stripe Webhook-Route MUSS vor express.json() stehen, da sie den rohen Request-Body benötigt.
 app.post('/api/stripe-webhook', express.raw({type: 'application/json'}), verifyStripeSignature, async (req, res) => {
   const event = req.event;
+  console.log('Stripe webhook received:', event.type);
 
   // Handle the event
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object;
     const applicationId = paymentIntent.metadata.applicationId;
+    console.log('Payment succeeded for application:', applicationId);
 
     if (applicationId) {
       try {
@@ -391,6 +393,8 @@ app.post('/api/stripe-webhook', express.raw({type: 'application/json'}), verifyS
           [applicationId]
         );
         
+        console.log('Application updated:', appResult.rows[0]);
+        
         // Increment referral code usage count if referral code was used
         if (appResult.rows.length > 0 && appResult.rows[0].referral_code_id) {
           await pool.query(`
@@ -398,13 +402,16 @@ app.post('/api/stripe-webhook', express.raw({type: 'application/json'}), verifyS
             SET used_count = used_count + 1 
             WHERE id = $1
           `, [appResult.rows[0].referral_code_id]);
+          console.log('Referral code usage incremented');
         }
         
         await pool.query('COMMIT');
-        console.log(`Payment for application ${applicationId} recorded.`);
+        console.log(`Payment for application ${applicationId} recorded successfully.`);
         
         // Update remaining tickets
-        await updateRemainingTickets(tier);
+        if (appResult.rows.length > 0) {
+          await updateRemainingTickets(appResult.rows[0].tier);
+        }
         
         // Send confirmation email
         if (appResult.rows.length > 0) {
@@ -739,10 +746,12 @@ app.get('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
 // Get all waitlist entries
 app.get('/api/admin/waitlist', authenticateAdmin, async (req, res) => {
   try {
+    console.log('Fetching waitlist entries...');
     const result = await pool.query(`
       SELECT * FROM waitlist 
       ORDER BY created_at DESC
     `);
+    console.log(`Found ${result.rows.length} waitlist entries`);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching waitlist:', error);
@@ -840,6 +849,8 @@ app.put('/api/admin/referral-codes/:id/deactivate', authenticateAdmin, async (re
 
 app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
   try {
+    console.log('Fetching admin stats...');
+    
     const stats = await pool.query(`
       SELECT 
         COUNT(*) as total_applications,
@@ -851,16 +862,23 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
       LEFT JOIN payments p ON a.id = p.application_id
     `);
     
+    console.log('Applications stats:', stats.rows[0]);
+    
     const scarcity = await pool.query(`
       SELECT invitation_tickets, circle_tickets, sanctum_tickets FROM event_settings WHERE id = 1
     `);
     
-    res.json({
+    console.log('Scarcity settings:', scarcity.rows[0]);
+    
+    const result = {
       ...stats.rows[0],
       invitation_tickets: scarcity.rows[0]?.invitation_tickets || 20,
       circle_tickets: scarcity.rows[0]?.circle_tickets || 15,
       sanctum_tickets: scarcity.rows[0]?.sanctum_tickets || 10
-    });
+    };
+    
+    console.log('Final stats result:', result);
+    res.json(result);
   } catch (error) {
     console.error('Error fetching stats:', error);
     res.status(500).json({ error: 'Failed to fetch stats' });

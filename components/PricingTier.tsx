@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface PricingTierProps {
   title: string;
@@ -12,6 +12,22 @@ interface PricingTierProps {
 }
 
 const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, features, isFeatured = false, onSelect, ctaText, remainingTickets }) => {
+  const [isLowStock, setIsLowStock] = useState(false);
+  const [showExplosion, setShowExplosion] = useState(false);
+
+  useEffect(() => {
+    if (remainingTickets !== undefined && remainingTickets <= 3) {
+      setIsLowStock(true);
+      // Trigger explosion animation after a delay
+      const timer = setTimeout(() => {
+        setShowExplosion(true);
+        setTimeout(() => setShowExplosion(false), 1000);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else {
+      setIsLowStock(false);
+    }
+  }, [remainingTickets]);
   const tierClasses = `border p-8 rounded-lg flex flex-col text-center transition-all duration-300 h-full ${
     isFeatured 
       ? 'bg-gray-900 border-gray-600 transform lg:scale-105 shadow-2xl z-10' 
@@ -25,16 +41,28 @@ const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, fe
   }`;
 
   return (
-    <div className={tierClasses}>
+    <div className={`${tierClasses} ${isLowStock ? 'ring-2 ring-red-500 ring-opacity-50' : ''} ${showExplosion ? 'animate-bounce' : ''}`}>
       <h3 className="font-serif-display text-2xl text-white mb-2">{title}</h3>
       <p className="text-4xl font-bold font-serif-display text-white mb-4">{price}</p>
       {remainingTickets !== undefined && (
         <div className="mb-4">
           <p className="text-sm text-gray-400">
             {remainingTickets > 0 ? (
-              <span className="text-yellow-400">Nur noch {remainingTickets} Plätze verfügbar</span>
+              <span 
+                className={`transition-all duration-500 ${
+                  remainingTickets <= 3 ? 'text-red-400 text-lg font-bold animate-pulse' : 
+                  remainingTickets <= 6 ? 'text-orange-400 text-base font-semibold' : 
+                  'text-yellow-400'
+                }`}
+              >
+                {remainingTickets <= 3 ? '⚠️ Nur noch ' : 'Nur noch '}
+                <span className={`inline-block transition-all duration-300 hover:scale-110 ${isLowStock ? 'text-2xl font-black animate-pulse' : ''}`}>
+                  {remainingTickets}
+                </span>
+                {remainingTickets <= 3 ? ' Plätze!' : ' Plätze verfügbar'}
+              </span>
             ) : (
-              <span className="text-red-400">Ausverkauft</span>
+              <span className="text-red-400 font-bold">🚫 Ausverkauft</span>
             )}
           </p>
         </div>

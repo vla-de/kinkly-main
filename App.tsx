@@ -66,6 +66,14 @@ const App: React.FC = () => {
       }
     };
     checkAdminAccess();
+
+    // Listen for custom events from cookie consent
+    const handleOpenModal = (event: CustomEvent) => {
+      setActiveModal(event.detail);
+    };
+
+    window.addEventListener('openModal', handleOpenModal as EventListener);
+    return () => window.removeEventListener('openModal', handleOpenModal as EventListener);
   }, []);
 
   const handleAdminLoginSuccess = () => {

@@ -526,10 +526,35 @@ const AdminPanel: React.FC = () => {
           {activeTab === 'scarcity' && !loading && (
             <div>
               <h2 className="font-serif-display text-2xl text-white mb-6">Scarcity Management</h2>
+              
+              {/* Current Status */}
+              <div className="bg-gray-800 p-4 rounded-lg mb-6">
+                <h3 className="text-white font-medium mb-3">Aktueller Status:</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="text-gray-300">
+                    <span className="text-white font-medium">The Invitation:</span><br />
+                    {stats?.invitation_tickets || 0} verfügbar
+                  </div>
+                  <div className="text-gray-300">
+                    <span className="text-white font-medium">The Circle:</span><br />
+                    {stats?.circle_tickets || 0} verfügbar
+                  </div>
+                  <div className="text-gray-300">
+                    <span className="text-white font-medium">The Inner Sanctum:</span><br />
+                    {stats?.sanctum_tickets || 0} verfügbar
+                  </div>
+                </div>
+              </div>
+              
               <div className="bg-gray-800 p-6 rounded-lg space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="text-white font-medium block mb-2">The Invitation Tickets:</label>
+                    <label className="text-white font-medium block mb-2">
+                      The Invitation Tickets:
+                      <span className="text-gray-400 text-sm ml-2">
+                        (Aktuell: {stats?.invitation_tickets || 0} verfügbar)
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={stats?.invitation_tickets || 0}
@@ -538,7 +563,12 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-white font-medium block mb-2">The Circle Tickets:</label>
+                    <label className="text-white font-medium block mb-2">
+                      The Circle Tickets:
+                      <span className="text-gray-400 text-sm ml-2">
+                        (Aktuell: {stats?.circle_tickets || 0} verfügbar)
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={stats?.circle_tickets || 0}
@@ -547,7 +577,12 @@ const AdminPanel: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-white font-medium block mb-2">The Inner Sanctum Tickets:</label>
+                    <label className="text-white font-medium block mb-2">
+                      The Inner Sanctum Tickets:
+                      <span className="text-gray-400 text-sm ml-2">
+                        (Aktuell: {stats?.sanctum_tickets || 0} verfügbar)
+                      </span>
+                    </label>
                     <input
                       type="number"
                       value={stats?.sanctum_tickets || 0}
