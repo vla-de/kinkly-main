@@ -76,9 +76,23 @@ const AdminPanel: React.FC = () => {
           setReferralCodes(referralsData);
           break;
         case 'waitlist':
-          const waitlistResponse = await fetch('/api/admin/waitlist', { headers });
-          const waitlistData = await waitlistResponse.json();
-          setWaitlist(waitlistData);
+          // Try admin endpoint first, fallback to direct database query
+          try {
+            const waitlistResponse = await fetch('/api/admin/waitlist', { headers });
+            if (waitlistResponse.ok) {
+              const waitlistData = await waitlistResponse.json();
+              setWaitlist(waitlistData);
+            } else {
+              // Fallback: Get waitlist from users with tier 'waitlist'
+              const usersResponse = await fetch('/api/admin/users', { headers });
+              const usersData = await usersResponse.json();
+              const waitlistData = usersData.filter((user: any) => user.tier === 'waitlist');
+              setWaitlist(waitlistData);
+            }
+          } catch (error) {
+            console.error('Error fetching waitlist:', error);
+            setWaitlist([]);
+          }
           break;
         case 'analytics':
           const statsResponse = await fetch('/api/admin/stats', { headers });
@@ -533,15 +547,15 @@ const AdminPanel: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="text-gray-300">
                     <span className="text-white font-medium">The Invitation:</span><br />
-                    {stats?.invitation_tickets || 0} verfügbar
+                    {stats?.invitation_sold || 0} verkauft
                   </div>
                   <div className="text-gray-300">
                     <span className="text-white font-medium">The Circle:</span><br />
-                    {stats?.circle_tickets || 0} verfügbar
+                    {stats?.circle_sold || 0} verkauft
                   </div>
                   <div className="text-gray-300">
                     <span className="text-white font-medium">The Inner Sanctum:</span><br />
-                    {stats?.sanctum_tickets || 0} verfügbar
+                    {stats?.sanctum_sold || 0} verkauft
                   </div>
                 </div>
               </div>
