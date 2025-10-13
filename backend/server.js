@@ -441,34 +441,6 @@ const calculateOrderAmount = (priceString) => {
   return Math.round(priceNumber * 100);
 };
 
-const sendConfirmationEmail = async (fullName, email, tier) => {
-  console.log(`Sending confirmation email to ${email} for ${tier}.`);
-  // EMAIL LOGIC GOES HERE
-  /*
-  try {
-    await resend.emails.send({
-      from: EMAIL_FROM,
-      to: email,
-      subject: 'Your Application to Kinkly Berlin has been received',
-      html: `
-        <div style="font-family: sans-serif; color: #333;">
-          <h2>Dear ${fullName},</h2>
-          <p>Thank you for your application for <strong>${tier}</strong>.</p>
-          <p>Your request has been received and is now under review by The Circle. This is not a confirmation of entry.</p>
-          <p>If your application is successful, you will receive a separate confirmation with your official invitation and further details.</p>
-          <p>If your application is not successful, you will be notified and your payment will be fully refunded.</p>
-          <br/>
-          <p>Sincerely,</p>
-          <p><strong>The Circle at Kinkly</strong></p>
-        </div>
-      `,
-    });
-    console.log(`Confirmation email sent successfully to ${email}.`);
-  } catch (error) {
-    console.error(`Failed to send email to ${email}:`, error);
-  }
-  */
-};
 
 
 // 5. API-Routen
@@ -743,6 +715,22 @@ app.get('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Get all waitlist entries - TEMPORARY ENDPOINT
+app.get('/api/waitlist', async (req, res) => {
+  try {
+    console.log('Fetching waitlist entries...');
+    const result = await pool.query(`
+      SELECT * FROM waitlist 
+      ORDER BY created_at DESC
+    `);
+    console.log(`Found ${result.rows.length} waitlist entries`);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching waitlist:', error);
+    res.status(500).json({ error: 'Failed to fetch waitlist' });
+  }
+});
+
 // Get all waitlist entries
 app.get('/api/admin/waitlist', authenticateAdmin, async (req, res) => {
   try {
@@ -864,6 +852,18 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     
     console.log('Applications stats:', stats.rows[0]);
     
+    // Get sold tickets by tier
+    const soldTickets = await pool.query(`
+      SELECT 
+        COUNT(CASE WHEN tier = 'The Invitation' THEN 1 END) as invitation_sold,
+        COUNT(CASE WHEN tier = 'The Circle' THEN 1 END) as circle_sold,
+        COUNT(CASE WHEN tier = 'The Inner Sanctum' THEN 1 END) as sanctum_sold
+      FROM applications 
+      WHERE status IN ('pending_review', 'approved')
+    `);
+    
+    console.log('Sold tickets:', soldTickets.rows[0]);
+    
     const scarcity = await pool.query(`
       SELECT invitation_tickets, circle_tickets, sanctum_tickets FROM event_settings WHERE id = 1
     `);
@@ -872,9 +872,14 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     
     const result = {
       ...stats.rows[0],
-      invitation_tickets: scarcity.rows[0]?.invitation_tickets || 20,
-      circle_tickets: scarcity.rows[0]?.circle_tickets || 15,
-      sanctum_tickets: scarcity.rows[0]?.sanctum_tickets || 10
+      // Available tickets (total - sold)
+      invitation_tickets: (scarcity.rows[0]?.invitation_tickets || 20) - (soldTickets.rows[0]?.invitation_sold || 0),
+      circle_tickets: (scarcity.rows[0]?.circle_tickets || 15) - (soldTickets.rows[0]?.circle_sold || 0),
+      sanctum_tickets: (scarcity.rows[0]?.sanctum_tickets || 10) - (soldTickets.rows[0]?.sanctum_sold || 0),
+      // Sold tickets for admin display
+      invitation_sold: soldTickets.rows[0]?.invitation_sold || 0,
+      circle_sold: soldTickets.rows[0]?.circle_sold || 0,
+      sanctum_sold: soldTickets.rows[0]?.sanctum_sold || 0
     };
     
     console.log('Final stats result:', result);
