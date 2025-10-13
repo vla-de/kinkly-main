@@ -24,17 +24,17 @@ const ExperienceSection: React.FC = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <ExperienceCard 
-            imageUrl="/ambiance.jpg" 
+            imageUrl="/images/mysterious-ambiance-icon.jpg" 
             title={t.experience_card_1_title} 
             description={t.experience_card_1_desc} 
           />
           <ExperienceCard 
-            imageUrl="https://picsum.photos/800/600?random=2" 
+            imageUrl="/images/exquisite-performances.jpg" 
             title={t.experience_card_2_title} 
             description={t.experience_card_2_desc} 
           />
           <ExperienceCard 
-            imageUrl="https://picsum.photos/800/600?random=3" 
+            imageUrl="/images/curated-encounters.jpg" 
             title={t.experience_card_3_title} 
             description={t.experience_card_3_desc} 
           />
