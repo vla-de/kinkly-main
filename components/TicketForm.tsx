@@ -153,7 +153,7 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
         <div>
           <button 
             type="submit" 
-            disabled={isSubmitting}
+            disabled={isSubmitting || !elitePasscode}
             className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider disabled:bg-gray-400"
           >
             {isSubmitting ? t.ticket_button_submitting : t.ticket_button}
