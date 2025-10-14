@@ -1254,6 +1254,44 @@ app.get('/api/admin/waitlist', authenticateAdmin, async (req, res) => {
 });
 
 // Send event invite to waitlist person
+// --- Admin: assign code to waitlist entry ---
+app.post('/api/admin/waitlist/assign-code', authenticateAdmin, async (req, res) => {
+  const { waitlistId, codeId } = req.body;
+  
+  if (!waitlistId || !codeId) {
+    return res.status(400).json({ error: 'Waitlist ID and Code ID are required' });
+  }
+  
+  try {
+    // Check if code is available (not assigned to a user)
+    const codeRes = await pool.query(
+      `SELECT id, user_id FROM referral_codes WHERE id = $1 AND is_active = true`,
+      [codeId]
+    );
+    
+    if (codeRes.rows.length === 0) {
+      return res.status(400).json({ error: 'Code not found or inactive' });
+    }
+    
+    if (codeRes.rows[0].user_id) {
+      return res.status(400).json({ error: 'Code is already assigned to a user' });
+    }
+    
+    // Update waitlist entry with referral code
+    await pool.query(
+      `UPDATE waitlist SET referral_code = (
+        SELECT code FROM referral_codes WHERE id = $1
+      ) WHERE id = $2`,
+      [codeId, waitlistId]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error assigning code to waitlist:', error);
+    res.status(500).json({ error: 'Failed to assign code' });
+  }
+});
+
 app.post('/api/admin/send-invite', authenticateAdmin, async (req, res) => {
   try {
     const { email, firstName, lastName, referralCode, customMessage } = req.body;

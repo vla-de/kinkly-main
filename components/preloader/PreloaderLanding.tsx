@@ -20,6 +20,13 @@ const PreloaderLanding: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [emailExists, setEmailExists] = useState<boolean | null>(null);
   const [showFooter, setShowFooter] = useState(false);
+  const [showEmailCapture, setShowEmailCapture] = useState(false);
+  const [validatedCode, setValidatedCode] = useState<string>('');
+  const [captureData, setCaptureData] = useState({
+    firstName: '',
+    lastName: '',
+    email: ''
+  });
 
   const SCROLL_TRIGGER_DISTANCE = 50;
 
@@ -91,7 +98,9 @@ const PreloaderLanding: React.FC = () => {
         const data = await res.json().catch(() => ({}));
         setError(data.error || (language === 'en' ? 'Invalid code.' : 'Code ungültig.'));
       } else {
-        window.location.href = `/event?elitePasscode=${code}`;
+        // Show email/name capture modal before redirect
+        setShowEmailCapture(true);
+        setValidatedCode(code);
       }
     } catch (err) {
       setError(language === 'en' ? 'Network error. Please try again.' : 'Netzwerkfehler. Bitte erneut versuchen.');
@@ -205,6 +214,50 @@ const PreloaderLanding: React.FC = () => {
     setShowFooter(true);
   };
 
+  const handleEmailCaptureSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!captureData.email.trim()) return;
+    
+    setLoading(true);
+    try {
+      // Create prospect entry
+      const res = await fetch(`${API_BASE}/api/prospects`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: captureData.firstName,
+          lastName: captureData.lastName,
+          email: captureData.email,
+          referralCode: validatedCode,
+          source: 'preloader'
+        })
+      });
+      
+      if (res.ok) {
+        // Store data for transfer to event page
+        localStorage.setItem('kinklyFormData', JSON.stringify({
+          firstName: captureData.firstName,
+          lastName: captureData.lastName,
+          email: captureData.email
+        }));
+        
+        // Redirect to event page
+        window.location.href = `/event?elitePasscode=${validatedCode}`;
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || (language === 'en' ? 'Failed to save data.' : 'Daten konnten nicht gespeichert werden.'));
+      }
+    } catch (err) {
+      setError(language === 'en' ? 'Network error. Please try again.' : 'Netzwerkfehler. Bitte erneut versuchen.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const skipEmailCapture = () => {
+    window.location.href = `/event?elitePasscode=${validatedCode}`;
+  };
+
   return (
     <main className="bg-black min-h-screen text-gray-300 relative overflow-x-hidden">
       {/* Language Toggle - always visible */}
@@ -315,6 +368,64 @@ const PreloaderLanding: React.FC = () => {
               {phase === 'initial' && <ScrollIndicator />}
             </div>
           </div>
+          
+          {/* Email Capture Modal */}
+          {showEmailCapture && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+              <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md">
+                <h3 className="text-xl font-serif-display text-white mb-4 text-center">
+                  {language === 'en' ? 'Almost there...' : 'Fast geschafft...'}
+                </h3>
+                <p className="text-gray-400 text-sm mb-6 text-center">
+                  {language === 'en' 
+                    ? 'Share your details to receive updates about the event.' 
+                    : 'Teile deine Daten mit uns, um Updates zum Event zu erhalten.'}
+                </p>
+                
+                <form onSubmit={handleEmailCaptureSubmit} className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder={language === 'en' ? 'First Name' : 'Vorname'}
+                    value={captureData.firstName}
+                    onChange={(e) => setCaptureData(prev => ({ ...prev, firstName: e.target.value }))}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  />
+                  <input
+                    type="text"
+                    placeholder={language === 'en' ? 'Last Name' : 'Nachname'}
+                    value={captureData.lastName}
+                    onChange={(e) => setCaptureData(prev => ({ ...prev, lastName: e.target.value }))}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  />
+                  <input
+                    type="email"
+                    placeholder={language === 'en' ? 'Email' : 'E-Mail'}
+                    value={captureData.email}
+                    onChange={(e) => setCaptureData(prev => ({ ...prev, email: e.target.value }))}
+                    required
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                  />
+                  
+                  <div className="flex space-x-3">
+                    <button
+                      type="button"
+                      onClick={skipEmailCapture}
+                      className="flex-1 bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600 transition-all"
+                    >
+                      {language === 'en' ? 'Skip' : 'Überspringen'}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading || !captureData.email}
+                      className="flex-1 bg-white text-black py-3 rounded-lg disabled:opacity-60 hover:bg-gray-100 transition-all font-semibold"
+                    >
+                      {loading ? (language === 'en' ? 'Saving...' : 'Speichere...') : (language === 'en' ? 'Continue' : 'Weiter')}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </main>
       );
     };

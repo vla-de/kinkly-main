@@ -263,6 +263,31 @@ const AdminPanel: React.FC = () => {
     setShowInviteModal(true);
   };
 
+  const assignCodeToWaitlist = async (waitlistId: number, codeId: string) => {
+    if (!codeId) return;
+    
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/waitlist/assign-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ waitlistId, codeId: parseInt(codeId) })
+      });
+      
+      if (response.ok) {
+        fetchData(); // Refresh data
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to assign code');
+      }
+    } catch (error) {
+      setError('Network error');
+    }
+  };
+
   const handleSendInvite = async () => {
     if (!selectedPerson) return;
     
@@ -546,12 +571,26 @@ const AdminPanel: React.FC = () => {
                           {new Date(person.created_at).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-4">
-                          <button
-                            onClick={() => sendEventInvite(person)}
-                            className="btn-exclusive bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs"
-                          >
-                            Send Invite
-                          </button>
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() => sendEventInvite(person)}
+                              className="btn-exclusive bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs"
+                            >
+                              Send Invite
+                            </button>
+                            {!person.referral_code && (
+                              <select
+                                onChange={(e) => assignCodeToWaitlist(person.id, e.target.value)}
+                                className="bg-gray-700 text-white px-2 py-1 text-xs rounded border border-gray-600"
+                                defaultValue=""
+                              >
+                                <option value="">Assign Code</option>
+                                {referralCodes.filter(rc => rc.is_active && !rc.user_id).map(rc => (
+                                  <option key={rc.id} value={rc.id}>{rc.code}</option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -836,6 +875,26 @@ const AdminPanel: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Email: {selectedPerson.email}
                 </label>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Message Template:
+                </label>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setInviteMessage(e.target.value);
+                    }
+                  }}
+                  className="w-full bg-gray-800 border border-gray-600 text-white px-3 py-2 rounded mb-2"
+                  defaultValue=""
+                >
+                  <option value="">Select a template...</option>
+                  <option value="Welcome to Kinkly! Your exclusive invitation awaits. Join us for an extraordinary evening of elegance and connection.">Welcome Template</option>
+                  <option value="The circle awaits you. Your Elite Passcode grants you access to our most exclusive event. Don't miss this opportunity.">Elite Access Template</option>
+                  <option value="Thank you for your interest in Kinkly. We're excited to invite you to join our exclusive community for an unforgettable experience.">Thank You Template</option>
+                </select>
               </div>
               
               <div>
