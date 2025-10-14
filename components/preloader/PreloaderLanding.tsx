@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import KLogo from './KLogo';
 import MedusaLoader from './MedusaLoader';
@@ -6,14 +6,54 @@ import ScrollIndicator from './ScrollIndicator';
 
 const API_BASE = 'https://kinkly-backend.onrender.com';
 
+type AnimationPhase = 'initial' | 'docking' | 'loading' | 'formVisible';
+
 const PreloaderLanding: React.FC = () => {
   const { language } = useLanguage();
   const [mode, setMode] = useState<'code' | 'waitlist'>('code');
+  const [phase, setPhase] = useState<AnimationPhase>('initial');
   const [elitePasscode, setElitePasscode] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const SCROLL_TRIGGER_DISTANCE = 50;
+
+  const handleScroll = useCallback(() => {
+    if (window.scrollY > SCROLL_TRIGGER_DISTANCE) {
+      setPhase('docking');
+      window.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (phase === 'initial') {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [phase, handleScroll]);
+
+  useEffect(() => {
+    const isLocked = phase === 'docking' || phase === 'loading' || phase === 'formVisible';
+    document.body.style.overflow = isLocked ? 'hidden' : 'auto';
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [phase]);
+
+  const handleKTransitionEnd = useCallback(() => {
+    if (phase === 'docking') setPhase('loading');
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'loading') {
+      const t = setTimeout(() => setPhase('formVisible'), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [phase]);
 
   const validateCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,108 +131,88 @@ const PreloaderLanding: React.FC = () => {
   };
 
   return (
-    <section className="min-h-screen bg-black text-gray-300 flex items-center relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none opacity-40 flex items-start justify-center mt-10">
-        <MedusaLoader />
-      </div>
-      <div className="container mx-auto px-6 max-w-xl w-full relative">
-        <div className="flex flex-col items-center mb-6">
-          <KLogo />
-          <ScrollIndicator />
-        </div>
+    <main className="bg-black min-h-screen text-gray-300 relative overflow-x-hidden">
+      <div className="h-[200vh] relative">
+        <div className="sticky top-0 h-screen w-full flex flex-col items-center justify-center">
+          <KLogo phase={phase} onTransitionEnd={handleKTransitionEnd} />
 
-        <div className="flex justify-center mb-8 space-x-4">
-          <button
-            onClick={() => setMode('code')}
-            className={`px-4 py-2 rounded border ${mode==='code' ? 'bg-white text-black' : 'border-gray-600 text-gray-300'}`}
-          >
-            {language === 'en' ? 'Elite Passcode' : 'Elite Passcode'}
-          </button>
-          <button
-            onClick={() => setMode('waitlist')}
-            className={`px-4 py-2 rounded border ${mode==='waitlist' ? 'bg-white text-black' : 'border-gray-600 text-gray-300'}`}
-          >
-            {language === 'en' ? 'No passcode?' : 'Kein Passcode?'}
-          </button>
-        </div>
+          {/* Overlay content area */}
+          <div className={`fixed inset-0 z-30 ${phase === 'formVisible' ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+            <div className="h-full w-full overflow-y-auto overscroll-contain scrollbar-none">
+              <div className="min-h-full flex flex-col items-center justify-center pt-[10vh] pb-8 space-y-8">
+                {/* Medusa shows from loading onwards */}
+                <div className={`flex items-center justify-center transition-opacity duration-[2000ms] ease-out ${phase === 'loading' || phase === 'formVisible' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                  <MedusaLoader />
+                </div>
 
-        {mode === 'code' ? (
-          <div className="mt-6">
-            {/* 3-column section like original preloader */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-              {/* left copy */}
-              <div className="text-gray-300 text-sm leading-relaxed order-2 md:order-1">
-                {language === 'en' ? (
-                  <>
-                    <p>Kinkly is no ordinary night. It is a ritual. A secret feast of the senses, inspired by Gatsby, carried by elegance, created for those who demand more. Only every three months. Only for those who hold the key.</p>
-                    <p className="mt-4">An evening that ignites the senses, connects souls, and creates unforgettable moments – exclusively for those who live the extraordinary.</p>
-                  </>
-                ) : (
-                  <>
-                    <p>Kinkly ist keine gewöhnliche Nacht. Es ist ein Ritual – ein geheimes Fest der Sinne, getragen von Eleganz, geschaffen für jene, die mehr verlangen. Nur alle drei Monate. Nur für diejenigen, die den Schlüssel besitzen.</p>
-                    <p className="mt-4">Ein Abend, der die Sinne entfacht, Seelen verbindet und unvergessliche Momente schafft – exklusiv für Menschen, die das Außergewöhnliche leben.</p>
-                  </>
-                )}
-              </div>
-              {/* center medusa */}
-              <div className="flex justify-center order-1 md:order-2">
-                <MedusaLoader />
-              </div>
-              {/* right form */}
-              <div className="order-3">
-                <h2 className="font-serif-display text-3xl md:text-4xl text-white mb-4">{language==='en' ? 'THE KEY, PLEASE.' : 'DER SCHLÜSSEL, BITTE.'}</h2>
-                <form onSubmit={validateCode} className="space-y-3">
-                  <input
-                    type="text"
-                    value={elitePasscode}
-                    onChange={(e) => setElitePasscode(e.target.value.toUpperCase())}
-                    placeholder={language === 'en' ? 'Enter your Elite Passcode' : 'Elite Passcode eingeben'}
-                    className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white"
-                  />
-                  <button disabled={loading || !elitePasscode}
-                    className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
-                    {loading ? (language === 'en' ? 'Checking…' : 'Prüfe…') : (language === 'en' ? 'ENTER' : 'EINTRETEN')}
-                  </button>
-                </form>
-                <div className="mt-3 text-center">
-                  <button type="button" onClick={() => setMode('waitlist')} className="text-gray-400 hover:text-gray-200 underline text-sm">
-                    {language==='en' ? 'No passcode? Join the waitlist' : 'Kein Passcode? Warteliste beitreten'}
-                  </button>
+                <div className="w-full max-w-6xl px-4">
+                  <div className={`flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-16 items-center lg:items-start transition-all duration-2000 ease-out ${phase === 'formVisible' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}>
+                    {/* Left text */}
+                    <div className="max-w-xl mx-auto lg:mx-0 text-center lg:text-left text-white/80 space-y-4 text-[15px] leading-relaxed">
+                      {language === 'en' ? (
+                        <>
+                          <p>Kinkly is no ordinary night. It is a ritual. A secret feast of the senses, inspired by Gatsby, carried by elegance, created for those who demand more. Only every three months. Only for those who hold the key.</p>
+                          <p>An evening that ignites the senses, connects souls, and creates unforgettable moments – exclusively for those who live the extraordinary.</p>
+                        </>
+                      ) : (
+                        <>
+                          <p>Kinkly ist keine gewöhnliche Nacht. Es ist ein Ritual – ein geheimes Fest der Sinne, getragen von Eleganz, geschaffen für jene, die mehr verlangen. Nur alle drei Monate. Nur für diejenigen, die den Schlüssel besitzen.</p>
+                          <p>Ein Abend, der die Sinne entfacht, Seelen verbindet und unvergessliche Momente schafft – exklusiv für Menschen, die das Außergewöhnliche leben.</p>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Right column: mode switch + forms */}
+                    <div className="w-full max-w-md mx-auto lg:mx-0">
+                      <div className="flex justify-center mb-6 space-x-3">
+                        <button onClick={() => setMode('code')} className={`px-4 py-2 rounded border ${mode==='code' ? 'bg-white text-black' : 'border-gray-600 text-gray-300'}`}>
+                          {language === 'en' ? 'Elite Passcode' : 'Elite Passcode'}
+                        </button>
+                        <button onClick={() => setMode('waitlist')} className={`px-4 py-2 rounded border ${mode==='waitlist' ? 'bg-white text-black' : 'border-gray-600 text-gray-300'}`}>
+                          {language === 'en' ? 'No passcode?' : 'Kein Passcode?'}
+                        </button>
+                      </div>
+
+                      {mode === 'code' ? (
+                        <div>
+                          <h2 className="font-serif-display text-3xl md:text-4xl text-white mb-4">{language==='en' ? 'THE KEY, PLEASE.' : 'DER SCHLÜSSEL, BITTE.'}</h2>
+                          <form onSubmit={validateCode} className="space-y-3">
+                            <input type="text" value={elitePasscode} onChange={(e) => setElitePasscode(e.target.value.toUpperCase())} placeholder={language === 'en' ? 'Enter your Elite Passcode' : 'Elite Passcode eingeben'} className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white" />
+                            <button disabled={loading || !elitePasscode} className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">{loading ? (language === 'en' ? 'Checking…' : 'Prüfe…') : (language === 'en' ? 'ENTER' : 'EINTRETEN')}</button>
+                          </form>
+                          <div className="mt-3 text-center">
+                            <button type="button" onClick={() => setMode('waitlist')} className="text-gray-400 hover:text-gray-200 underline text-sm">
+                              {language==='en' ? 'No passcode? Join the waitlist' : 'Kein Passcode? Warteliste beitreten'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <form onSubmit={submitWaitlist} className="space-y-4">
+                          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={language === 'en' ? 'Email for waitlist' : 'E‑Mail für Warteliste'} className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center" />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <button disabled={loading || !email} className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">{loading ? (language === 'en' ? 'Sending…' : 'Sende…') : (language === 'en' ? 'Join waitlist' : 'Warteliste beitreten')}</button>
+                            <button type="button" onClick={sendMagicLink} disabled={loading || !email} className="w-full bg-gray-100 text-black py-3 font-semibold rounded disabled:opacity-60">{language === 'en' ? 'Send login link' : 'Login‑Link senden'}</button>
+                          </div>
+                          <p className="text-xs text-gray-500 text-center">{language === 'en' ? 'By joining or requesting a login link you agree to our privacy policy.' : 'Mit Klick stimmst du unserer Datenschutzerklärung zu.'}</p>
+                        </form>
+                      )}
+
+                      {message && <p className="text-green-400 text-center mt-4">{message}</p>}
+                      {error && <p className="text-red-400 text-center mt-4">{error}</p>}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        ) : (
-          <form onSubmit={submitWaitlist} className="space-y-4">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={language === 'en' ? 'Email for waitlist' : 'E‑Mail für Warteliste'}
-              className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center"
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button disabled={loading || !email}
-                className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
-                {loading ? (language === 'en' ? 'Sending…' : 'Sende…') : (language === 'en' ? 'Join waitlist' : 'Warteliste beitreten')}
-              </button>
-              <button type="button" onClick={sendMagicLink} disabled={loading || !email}
-                className="w-full bg-gray-100 text-black py-3 font-semibold rounded disabled:opacity-60">
-                {language === 'en' ? 'Send login link' : 'Login‑Link senden'}
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 text-center">
-              {language === 'en'
-                ? 'By joining or requesting a login link you agree to our privacy policy.'
-                : 'Mit Klick stimmst du unserer Datenschutzerklärung zu.'}
-            </p>
-          </form>
-        )}
 
-        {message && <p className="text-green-400 text-center mt-4">{message}</p>}
-        {error && <p className="text-red-400 text-center mt-4">{error}</p>}
+          {/* Scroll indicator only before scroll */}
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-10">
+            {phase === 'initial' && <ScrollIndicator />}
+          </div>
+        </div>
       </div>
-    </section>
+    </main>
   );
 };
 
