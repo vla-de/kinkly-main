@@ -258,6 +258,42 @@ const initializeDb = async () => {
         UNIQUE(referral_code_id, ip_address, session_id)
       );
     `);
+
+    // Auth: users table (separate from applications for credentials/roles)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash TEXT,
+        role VARCHAR(20) NOT NULL DEFAULT 'user', -- user | referrer | admin
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Auth: magic links
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS magic_links (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        token VARCHAR(255) UNIQUE NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Auth: email verification tokens
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS email_verifications (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        token VARCHAR(255) UNIQUE NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        verified_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
     // Create or migrate event_settings table
     const eventSettingsCheck = await pool.query(`
       SELECT column_name FROM information_schema.columns 
