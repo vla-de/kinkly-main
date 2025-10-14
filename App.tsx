@@ -98,7 +98,6 @@ const App: React.FC = () => {
         <main>
           <PreloaderLanding />
         </main>
-        <Footer onImpressumClick={handleOpenImpressum} onDatenschutzClick={handleOpenDatenschutz} onAGBClick={() => setActiveModal('agb')} showInstagram={false} />
         <Modal isOpen={activeModal === 'login'} onClose={handleCloseModal}>
           <LoginForm />
         </Modal>
@@ -126,7 +125,7 @@ const App: React.FC = () => {
         <MembershipSection onTierSelect={handleTierSelect} />
         <NextEventSection onTicketClick={handleOpenReferral} />
       </main>
-      <Footer onImpressumClick={handleOpenImpressum} onDatenschutzClick={handleOpenDatenschutz} onAGBClick={() => setActiveModal('agb')} showInstagram={true} />
+      <Footer onImpressumClick={handleOpenImpressum} onDatenschutzClick={handleOpenDatenschutz} onAGBClick={() => setActiveModal('agb')} />
 
       <Modal isOpen={activeModal === 'login'} onClose={handleCloseModal}>
         <LoginForm />

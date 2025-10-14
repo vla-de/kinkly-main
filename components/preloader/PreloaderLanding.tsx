@@ -295,7 +295,6 @@ const PreloaderLanding: React.FC = () => {
                 onImpressumClick={handleImpressumClick}
                 onDatenschutzClick={handleDatenschutzClick}
                 onAGBClick={handleAGBClick}
-                showInstagram={false}
               />
             </div>
           )}
