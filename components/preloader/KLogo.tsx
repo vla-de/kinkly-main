@@ -22,7 +22,7 @@ const KLogo: React.FC<KLogoProps> = ({ phase, onTransitionEnd }) => {
       <style>{`
         @keyframes draw-k { 0% { stroke-dashoffset: 2000; } 100% { stroke-dashoffset: 0; } }
         @keyframes fade-in-fill { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes pulse-heartbeat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes pulse-heartbeat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
         @keyframes k-ripple-effect { from { transform: scale(.9); opacity: .4; } to { transform: scale(2.1); opacity: 0; } }
         .k-pulse { animation: pulse-heartbeat 3s ease-in-out infinite; }
         .animate-k-ripples::before,.animate-k-ripples::after { content:''; position:absolute; top:0; left:0; width:100%; height:100%; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='1.2'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat; animation:k-ripple-effect 1.5s ease-out infinite; opacity:0; }
