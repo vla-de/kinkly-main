@@ -90,17 +90,22 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
   return (
     <div>
       <h2 className="font-serif-display text-3xl text-white text-center mb-2">
-        {t.ticket_title}
+        Eine Einladung anfragen
         {selectedTier && <span className="block text-xl text-gray-400 mt-1 font-normal">{selectedTier.title}</span>}
       </h2>
       <p className="text-center text-gray-400 mb-6 text-sm">
-        {t.ticket_paragraph}
+        Bitte beachten Sie: Das Absenden Ihrer Anfrage und Zahlung ist eine Bewerbung. Es garantiert keinen Eintritt. Die endgültige Bestätigung wird nur vom Zirkel erteilt. Nicht erfolgreiche Bewerbungen werden vollständig zurückerstattet.
       </p>
-      {!elitePasscode && (
-        <div className="mb-4 p-3 rounded bg-gray-900 border border-gray-700 text-sm text-gray-300">
-          Um eine Anfrage zu stellen oder zu kaufen, füge deinen Elite Passcode hinzu.
+      
+      {/* Elite Passcode Display */}
+      <div className="mb-6 p-4 rounded bg-gray-900 border border-gray-700">
+        <div className="text-center">
+          <div className="text-sm text-gray-400 mb-2">Ihr Elite Passcode</div>
+          <div className="text-2xl font-mono font-bold text-white tracking-wider">
+            {elitePasscode || 'NICHT VERFÜGBAR'}
+          </div>
         </div>
-      )}
+      </div>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-gray-400">Vorname</label>
@@ -140,12 +145,13 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
         </div>
         <div>
           <label htmlFor="message" className="block text-sm font-medium text-gray-400">
-            {t.ticket_message_label}
+            Extra Wünsche, Vorlieben oder besondere Anmerkungen (Optional)
           </label>
           <textarea
             id="message"
             name="message"
             rows={3}
+            placeholder="Teilen Sie uns mit, was Sie sich für den Abend wünschen..."
             className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
           ></textarea>
         </div>

@@ -15,7 +15,7 @@ const LoginForm: React.FC = () => {
       const res = await fetch('/api/auth/request-magic-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, redirectUrl: window.location.origin })
+        body: JSON.stringify({ email, redirectUrl: window.location.origin + '/event' })
       });
       if (res.ok) {
         setStatus('sent');

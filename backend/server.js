@@ -622,7 +622,7 @@ app.get('/api/auth/magic-login', async (req, res) => {
 
     // Set session cookie
     setSessionCookie(res, { uid: user.id, role: user.role, exp: Date.now() + 1000 * 60 * 60 * 24 * 7 });
-    res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app');
+    res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app/event');
   } catch (e) {
     console.error('magic-login error:', e);
     res.status(500).send('Login failed');
