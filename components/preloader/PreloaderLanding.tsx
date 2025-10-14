@@ -89,8 +89,25 @@ const PreloaderLanding: React.FC = () => {
 
   return (
     <section className="min-h-screen bg-black text-gray-300 flex items-center relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none opacity-20 animate-pulse-slow">
-        <img src="/images/medusa.svg" alt="Medusa" className="w-[480px] h-[480px] mx-auto mt-16" />
+      <div className="absolute inset-0 pointer-events-none opacity-40 flex items-start justify-center mt-10">
+        {/* Lottie primary, video fallback */}
+        <lottie-player
+          autoplay
+          loop
+          mode="normal"
+          src="/medusa/medusa-loop2-1_animation.json"
+          style={{ width: '420px', height: '420px' }}
+        ></lottie-player>
+        <video
+          className="absolute w-[420px] h-[420px] object-contain"
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="/medusa/medusa-frame.png-hold"
+        >
+          <source src="/medusa/medusa_loop.mp4" type="video/mp4" />
+        </video>
       </div>
       <div className="container mx-auto px-6 max-w-xl w-full relative">
         <h1 className="font-serif-display text-4xl text-white text-center mb-8">Kinkly Berlin</h1>
