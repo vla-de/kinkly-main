@@ -40,8 +40,8 @@ const KLogo: React.FC<KLogoProps> = ({ phase, onTransitionEnd }) => {
             background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='1.5'/%3E%3C/svg%3E") center/contain no-repeat;
           } 
         }
-        .k-pulse { animation: heartbeat-double 1.8s ease-in-out infinite; }
-        .animate-k-ripples::before,.animate-k-ripples::after { content:''; position:absolute; top:0; left:0; width:100%; height:100%; animation:k-to-circle-ripple 2.4s ease-out infinite; opacity:0; }
+        .k-pulse { animation: heartbeat-double 2.1s ease-in-out infinite; }
+        .animate-k-ripples::before,.animate-k-ripples::after { content:''; position:absolute; top:0; left:0; width:100%; height:100%; animation:k-to-circle-ripple 2.1s ease-out infinite; opacity:0; transform-origin: 35% 50%; }
         .animate-k-ripples::before { animation-delay:0.2s; }
         .animate-k-ripples::after { animation-delay:0.6s; }
         .k-outline { font-family:'Cormorant', serif; font-weight:400; font-size:94px; fill:none; stroke:#404040; stroke-width:1.2; stroke-dasharray:2000; stroke-dashoffset:2000; animation:draw-k 2.5s cubic-bezier(0.68,-0.55,0.27,1.55) forwards; }
