@@ -224,7 +224,7 @@ const PreloaderLanding: React.FC = () => {
                         <div>
                           <h2 className="font-serif-display text-3xl md:text-4xl text-white mb-4">{language==='en' ? 'THE INVITATION AWAITS.' : ''}</h2>
                           <form onSubmit={validateCode} className="space-y-3">
-                            <input type="text" value={elitePasscode} onChange={(e) => setElitePasscode(e.target.value.toUpperCase())} placeholder={language === 'en' ? 'Enter your Elite Passcode' : 'Elite Passcode eingeben'} className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white" />
+                            <input type="text" value={elitePasscode} onChange={(e) => setElitePasscode(e.target.value.toUpperCase())} placeholder={language === 'en' ? 'Enter your Elite Passcode' : 'Elite Passcode eingeben'} className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center" />
                             <button disabled={loading || !elitePasscode} className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">{loading ? (language === 'en' ? 'Checking…' : 'Prüfe…') : (language === 'en' ? 'ENTER' : 'EINTRETEN')}</button>
                           </form>
                           <div className="mt-3 text-center">
