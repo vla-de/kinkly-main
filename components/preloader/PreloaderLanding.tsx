@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const API_BASE = 'https://kinkly-backend.onrender.com';
 
 const PreloaderLanding: React.FC = () => {
+  const { language } = useLanguage();
   const [mode, setMode] = useState<'code' | 'waitlist'>('code');
   const [elitePasscode, setElitePasscode] = useState('');
   const [email, setEmail] = useState('');
@@ -24,12 +26,12 @@ const PreloaderLanding: React.FC = () => {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || 'Code ungültig.');
+        setError(data.error || (language === 'en' ? 'Invalid code.' : 'Code ungültig.'));
       } else {
         window.location.href = `/event?elitePasscode=${elitePasscode.trim().toUpperCase()}`;
       }
     } catch (err) {
-      setError('Netzwerkfehler. Bitte erneut versuchen.');
+      setError(language === 'en' ? 'Network error. Please try again.' : 'Netzwerkfehler. Bitte erneut versuchen.');
     } finally {
       setLoading(false);
     }
@@ -48,14 +50,38 @@ const PreloaderLanding: React.FC = () => {
         body: JSON.stringify({ email: email.trim() })
       });
       if (res.ok) {
-        setMessage('Willkommen im Kreis – wir melden uns.');
+        setMessage(language === 'en' ? 'Welcome to the circle – we will be in touch.' : 'Willkommen im Kreis – wir melden uns.');
         setEmail('');
       } else {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || 'Ein Fehler ist aufgetreten.');
+        setError(data.error || (language === 'en' ? 'An error occurred.' : 'Ein Fehler ist aufgetreten.'));
       }
     } catch (err) {
-      setError('Netzwerkfehler. Bitte erneut versuchen.');
+      setError(language === 'en' ? 'Network error. Please try again.' : 'Netzwerkfehler. Bitte erneut versuchen.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendMagicLink = async () => {
+    if (!email.trim()) return;
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/request-magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), redirectUrl: window.location.origin + '/event' })
+      });
+      if (res.ok) {
+        setMessage(language === 'en' ? 'We sent you a secure login link.' : 'Wir haben dir einen sicheren Login‑Link gesendet.');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || (language === 'en' ? 'Failed to send login link.' : 'Login‑Link konnte nicht gesendet werden.'));
+      }
+    } catch {
+      setError(language === 'en' ? 'Network error. Please try again.' : 'Netzwerkfehler. Bitte erneut versuchen.');
     } finally {
       setLoading(false);
     }
@@ -74,13 +100,13 @@ const PreloaderLanding: React.FC = () => {
             onClick={() => setMode('code')}
             className={`px-4 py-2 rounded border ${mode==='code' ? 'bg-white text-black' : 'border-gray-600 text-gray-300'}`}
           >
-            Elite Passcode
+            {language === 'en' ? 'Elite Passcode' : 'Elite Passcode'}
           </button>
           <button
             onClick={() => setMode('waitlist')}
             className={`px-4 py-2 rounded border ${mode==='waitlist' ? 'bg-white text-black' : 'border-gray-600 text-gray-300'}`}
           >
-            Kein Passcode?
+            {language === 'en' ? 'No passcode?' : 'Kein Passcode?'}
           </button>
         </div>
 
@@ -90,12 +116,12 @@ const PreloaderLanding: React.FC = () => {
               type="text"
               value={elitePasscode}
               onChange={(e) => setElitePasscode(e.target.value.toUpperCase())}
-              placeholder="Elite Passcode"
+              placeholder={language === 'en' ? 'Elite Passcode' : 'Elite Passcode'}
               className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center"
             />
             <button disabled={loading || !elitePasscode}
               className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
-              {loading ? 'Prüfe…' : 'Eintreten'}
+              {loading ? (language === 'en' ? 'Checking…' : 'Prüfe…') : (language === 'en' ? 'Enter' : 'Eintreten')}
             </button>
           </form>
         ) : (
@@ -104,13 +130,24 @@ const PreloaderLanding: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="E‑Mail für Warteliste"
+              placeholder={language === 'en' ? 'Email for waitlist' : 'E‑Mail für Warteliste'}
               className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center"
             />
-            <button disabled={loading || !email}
-              className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
-              {loading ? 'Sende…' : 'Warteliste beitreten'}
-            </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button disabled={loading || !email}
+                className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
+                {loading ? (language === 'en' ? 'Sending…' : 'Sende…') : (language === 'en' ? 'Join waitlist' : 'Warteliste beitreten')}
+              </button>
+              <button type="button" onClick={sendMagicLink} disabled={loading || !email}
+                className="w-full bg-gray-100 text-black py-3 font-semibold rounded disabled:opacity-60">
+                {language === 'en' ? 'Send login link' : 'Login‑Link senden'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 text-center">
+              {language === 'en'
+                ? 'By joining or requesting a login link you agree to our privacy policy.'
+                : 'Mit Klick stimmst du unserer Datenschutzerklärung zu.'}
+            </p>
           </form>
         )}
 
