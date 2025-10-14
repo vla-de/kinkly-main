@@ -7,12 +7,20 @@ const ScrollIndicator: React.FC = () => {
         @keyframes scroll-arrow {
           0%, 100% {
             transform: translateY(0);
+            opacity: 0;
+          }
+          30% {
+             transform: translateY(18px);
+            opacity: 0.3;
+          }         
+          50% {
+            transform: translateY(28px);
             opacity: 0.6;
           }
-          50% {
-            transform: translateY(38px);
+          75% {
+             transform: translateY(38px);
             opacity: 0.3;
-          }
+          }  
         }
         .animate-scroll-arrow {
           animation: scroll-arrow 2s ease-in-out infinite;
