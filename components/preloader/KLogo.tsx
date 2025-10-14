@@ -25,8 +25,8 @@ const KLogo: React.FC<KLogoProps> = ({ phase, onTransitionEnd }) => {
         @keyframes pulse-heartbeat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
         @keyframes k-ripple-effect { from { transform: scale(1); opacity: .6; } to { transform: scale(2.8); opacity: 0; } }
         .k-pulse { animation: pulse-heartbeat 3s ease-in-out infinite; }
-        .animate-k-ripples::before,.animate-k-ripples::after { content:''; position:absolute; top:0; left:0; width:100%; height:100%; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='1.2'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat; animation:k-ripple-effect 3s ease-out infinite; opacity:0; }
-        .animate-k-ripples::after { animation-delay:1.5s; }
+        .animate-k-ripples::before,.animate-k-ripples::after { content:''; position:absolute; top:0; left:0; width:100%; height:100%; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='1.2'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat; animation:k-ripple-effect 1.5s ease-out infinite; opacity:0; }
+        .animate-k-ripples::after { animation-delay:0.8s; }
         .k-outline { font-family:'Cormorant', serif; font-weight:400; font-size:94px; fill:none; stroke:#404040; stroke-width:1.2; stroke-dasharray:2000; stroke-dashoffset:2000; animation:draw-k 2.5s cubic-bezier(0.68,-0.55,0.27,1.55) forwards; }
         .k-mask { font-family:'Cormorant', serif; font-weight:400; font-size:94px; fill:black; }
         .k-fill-white { font-family:'Cormorant', serif; font-weight:400; font-size:94px; fill:#404040; opacity:0; animation:fade-in-fill .8s ease-in 2.1s forwards; }
