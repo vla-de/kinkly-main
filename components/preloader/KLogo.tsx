@@ -27,12 +27,12 @@ const KLogo: React.FC<KLogoProps> = ({ phase, onTransitionEnd }) => {
           0% { 
             transform: scale(1); 
             opacity: .6; 
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='1.2'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='.8'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat;
           } 
           50% { 
             transform: scale(1.8); 
             opacity: .4; 
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='1.2'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='.8'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat;
           }
           100% { 
             transform: scale(3.2); 
