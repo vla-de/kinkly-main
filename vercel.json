@@ -1,4 +1,7 @@
 {
+  "routes": [
+    { "handle": "filesystem" }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
