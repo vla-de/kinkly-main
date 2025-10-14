@@ -11,17 +11,17 @@ interface FooterProps {
 
 const Footer: React.FC<FooterProps> = ({ onImpressumClick, onDatenschutzClick, onAGBClick }) => {
   const { t } = useLanguage();
-  const [brandText, setBrandText] = useState('KINKLY.EU');
+  const [brandText, setBrandText] = useState('2025 KINKLY');
   const [isAnimating, setIsAnimating] = useState(false);
   
-  const randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const targetText = 'BY VLAD';
+  const randomChars = 'ABCDEFG$I%LM*OPQ#TUVWXYZ01!?3456789';
+  const targetText = 'VLADISIGN';
   
   const animateText = () => {
     if (isAnimating) return;
     setIsAnimating(true);
     
-    let currentText = 'KINKLY.EU';
+    let currentText = '2025 KINKLY';
     const steps = 20;
     const stepDuration = 200; // 4s total / 20 steps = 200ms per step
     
@@ -38,7 +38,7 @@ const Footer: React.FC<FooterProps> = ({ onImpressumClick, onDatenschutzClick, o
           // Final text
           setBrandText(targetText);
           setTimeout(() => {
-            setBrandText('KINKLY.EU');
+            setBrandText('2025 KINKLY');
             setIsAnimating(false);
           }, 2000);
         }
