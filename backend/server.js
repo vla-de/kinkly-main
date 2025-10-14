@@ -225,6 +225,22 @@ const initializeDb = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    
+    // Create prospects table for pre-purchase tracking
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS prospects (
+        id SERIAL PRIMARY KEY,
+        first_name VARCHAR(255),
+        last_name VARCHAR(255),
+        email VARCHAR(255) NOT NULL,
+        referral_code_id INTEGER REFERENCES referral_codes(id),
+        source VARCHAR(50) DEFAULT 'preloader', -- 'preloader', 'event_page', 'admin'
+        status VARCHAR(50) DEFAULT 'active', -- 'active', 'converted', 'expired'
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(email)
+      );
+    `);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS payments (
         id SERIAL PRIMARY KEY,
@@ -637,8 +653,177 @@ app.get('/api/auth/magic-login', async (req, res) => {
   }
 });
 
+// --- User: get referrer stats for logged-in user ---
+app.get('/api/user/referrer-stats', authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.uid;
+    
+    // Get user's referral code
+    const codeRes = await pool.query(
+      `SELECT code FROM referral_codes WHERE user_id = $1`,
+      [userId]
+    );
+    
+    if (codeRes.rows.length === 0) {
+      return res.json({ 
+        hasCode: false, 
+        code: null, 
+        totalReferrals: 0, 
+        successfulPurchases: 0 
+      });
+    }
+    
+    const userCode = codeRes.rows[0].code;
+    
+    // Count total referrals (applications using this code)
+    const totalRes = await pool.query(
+      `SELECT COUNT(*) as total FROM applications WHERE referral_code_id = (
+        SELECT id FROM referral_codes WHERE code = $1
+      )`,
+      [userCode]
+    );
+    
+    // Count successful purchases (applications with successful payments)
+    const successfulRes = await pool.query(
+      `SELECT COUNT(*) as successful FROM applications a
+       JOIN payments p ON a.id = p.application_id
+       WHERE a.referral_code_id = (
+         SELECT id FROM referral_codes WHERE code = $1
+       ) AND p.status = 'completed'`,
+      [userCode]
+    );
+    
+    res.json({
+      hasCode: true,
+      code: userCode,
+      totalReferrals: parseInt(totalRes.rows[0].total),
+      successfulPurchases: parseInt(successfulRes.rows[0].successful)
+    });
+  } catch (e) {
+    console.error('referrer-stats error:', e);
+    res.status(500).json({ error: 'Failed to fetch referrer stats' });
+  }
+});
+
+// --- Prospects: create prospect entry ---
+app.post('/api/prospects', async (req, res) => {
+  const { firstName, lastName, email, referralCode, source = 'preloader' } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  
+  try {
+    // Get referral code ID if provided
+    let referralCodeId = null;
+    if (referralCode) {
+      const codeRes = await pool.query(
+        `SELECT id FROM referral_codes WHERE code = $1 AND is_active = true`,
+        [referralCode.toUpperCase()]
+      );
+      if (codeRes.rows.length > 0) {
+        referralCodeId = codeRes.rows[0].id;
+      }
+    }
+    
+    // Insert or update prospect
+    const result = await pool.query(`
+      INSERT INTO prospects (first_name, last_name, email, referral_code_id, source)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (email) DO UPDATE SET
+        first_name = COALESCE(EXCLUDED.first_name, prospects.first_name),
+        last_name = COALESCE(EXCLUDED.last_name, prospects.last_name),
+        referral_code_id = COALESCE(EXCLUDED.referral_code_id, prospects.referral_code_id),
+        source = EXCLUDED.source,
+        updated_at = NOW()
+      RETURNING id, status
+    `, [firstName, lastName, email, referralCodeId, source]);
+    
+    res.json({ 
+      success: true, 
+      prospectId: result.rows[0].id,
+      status: result.rows[0].status
+    });
+  } catch (e) {
+    console.error('prospects error:', e);
+    res.status(500).json({ error: 'Failed to create prospect' });
+  }
+});
+
+// --- Prospects: get prospect by email ---
+app.get('/api/prospects/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const result = await pool.query(`
+      SELECT p.*, rc.code as referral_code
+      FROM prospects p
+      LEFT JOIN referral_codes rc ON p.referral_code_id = rc.id
+      WHERE p.email = $1
+    `, [email]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Prospect not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (e) {
+    console.error('get prospect error:', e);
+    res.status(500).json({ error: 'Failed to fetch prospect' });
+  }
+});
+
 // --- User: link elite passcode to logged-in user (waitlist/prospect association) ---
 app.post('/api/user/add-passcode', authenticateUser, async (req, res) => {
+  const { code } = req.body || {};
+  if (!code) return res.status(400).json({ error: 'Code is required' });
+  
+  try {
+    // Validate the code exists and is active
+    const codeRes = await pool.query(
+      `SELECT id, user_id, max_uses, used_count, expires_at, is_active 
+       FROM referral_codes 
+       WHERE code = $1 AND is_active = true`,
+      [code.toUpperCase()]
+    );
+    
+    if (codeRes.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or inactive code' });
+    }
+    
+    const referralCode = codeRes.rows[0];
+    
+    // Check if code is expired
+    if (referralCode.expires_at && new Date(referralCode.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Code has expired' });
+    }
+    
+    // Check if code has reached max uses
+    if (referralCode.used_count >= referralCode.max_uses) {
+      return res.status(400).json({ error: 'Code has reached maximum uses' });
+    }
+    
+    // Check if user already has a code assigned
+    const existingCodeRes = await pool.query(
+      `SELECT id FROM referral_codes WHERE user_id = $1`,
+      [req.user.uid]
+    );
+    
+    if (existingCodeRes.rows.length > 0) {
+      return res.status(400).json({ error: 'User already has a code assigned' });
+    }
+    
+    // Assign the code to the user
+    await pool.query(
+      `UPDATE referral_codes SET user_id = $1 WHERE id = $2`,
+      [req.user.uid, referralCode.id]
+    );
+    
+    res.json({ success: true, message: 'Code successfully assigned' });
+  } catch (e) {
+    console.error('add-passcode error:', e);
+    res.status(500).json({ error: 'Failed to assign code' });
+  }
+});
   const { code } = req.body || {};
   if (!code) return res.status(400).json({ error: 'Code is required' });
   try {
