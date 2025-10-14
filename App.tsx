@@ -18,6 +18,8 @@ import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
 import WaitlistForm from './components/WaitlistForm';
 import CookieConsent from './components/CookieConsent';
+import ProfilePanel from './components/ProfilePanel';
+import PreloaderLanding from './components/preloader/PreloaderLanding';
 
 const App: React.FC = () => {
   const [activeModal, setActiveModal] = useState<null | 'login' | 'referral' | 'ticket' | 'payment' | 'success' | 'impressum' | 'datenschutz' | 'agb' | 'waitlist'>(null);
@@ -86,10 +88,39 @@ const App: React.FC = () => {
     return isAdminAuthenticated ? <AdminPanel /> : <AdminLogin onLoginSuccess={handleAdminLoginSuccess} />;
   }
 
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+
+  // Simple router: '/' -> Preloader, '/event' -> Event View
+  if (path === '/') {
+    return (
+      <div className="bg-black min-h-screen text-gray-300 font-sans antialiased relative">
+        <Header onLoginClick={handleOpenLogin} />
+        <main>
+          <PreloaderLanding />
+        </main>
+        <Footer onImpressumClick={handleOpenImpressum} onDatenschutzClick={handleOpenDatenschutz} onAGBClick={() => setActiveModal('agb')} />
+        <Modal isOpen={activeModal === 'login'} onClose={handleCloseModal}>
+          <LoginForm />
+        </Modal>
+        <Modal isOpen={activeModal === 'impressum'} onClose={handleCloseModal}>
+          <Impressum />
+        </Modal>
+        <Modal isOpen={activeModal === 'datenschutz'} onClose={handleCloseModal}>
+          <Datenschutz />
+        </Modal>
+        <Modal isOpen={activeModal === 'agb'} onClose={handleCloseModal}>
+          <AGB />
+        </Modal>
+        <CookieConsent onAccept={() => {}} onDecline={() => {}} />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-black min-h-screen text-gray-300 font-sans antialiased relative">
       <Header onLoginClick={handleOpenLogin} />
       <main>
+        <ProfilePanel />
         <HeroSection onTicketClick={handleOpenReferral} />
         <ExperienceSection />
         <MembershipSection onTierSelect={handleTierSelect} />
