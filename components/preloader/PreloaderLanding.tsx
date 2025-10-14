@@ -17,6 +17,7 @@ const PreloaderLanding: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [emailExists, setEmailExists] = useState<boolean | null>(null);
 
   const SCROLL_TRIGGER_DISTANCE = 50;
 
@@ -86,6 +87,13 @@ const PreloaderLanding: React.FC = () => {
     setLoading(true);
     setError(null);
     setMessage(null);
+    
+    // If email exists, send magic link instead
+    if (emailExists) {
+      await sendMagicLink();
+      return;
+    }
+    
     try {
       const res = await fetch(`${API_BASE}/api/waitlist`, {
         method: 'POST',
@@ -130,6 +138,38 @@ const PreloaderLanding: React.FC = () => {
     }
   };
 
+  // Check if email exists when user types
+  const checkEmailExists = async (emailToCheck: string) => {
+    if (!emailToCheck.includes('@')) {
+      setEmailExists(null);
+      return;
+    }
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToCheck.trim() })
+      });
+      setEmailExists(res.ok);
+    } catch {
+      setEmailExists(null);
+    }
+  };
+
+  // Debounced email check
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (email.trim()) {
+        checkEmailExists(email);
+      } else {
+        setEmailExists(null);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [email]);
+
   return (
     <main className="bg-black min-h-screen text-gray-300 relative overflow-x-hidden">
       <div className="h-[200vh] relative">
@@ -148,7 +188,7 @@ const PreloaderLanding: React.FC = () => {
                 <div className="w-full max-w-6xl px-4">
                   <div className={`flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-16 items-center lg:items-start transition-all duration-2000 ease-out ${phase === 'formVisible' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}>
                     {/* Left text */}
-                    <div className="max-w-xl mx-auto lg:mx-0 text-center lg:text-left text-white/80 space-y-4 text-[15px] leading-relaxed">
+                    <div className="max-w-xl mx-auto lg:mx-0 text-center lg:text-left text-white/80 space-y-4 text-lg leading-relaxed">
                       {language === 'en' ? (
                         <>
                           <p>Kinkly is no ordinary night. It is a ritual. A secret feast of the senses, inspired by Gatsby, carried by elegance, created for those who demand more. Only every three months. Only for those who hold the key.</p>
@@ -162,17 +202,8 @@ const PreloaderLanding: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Right column: mode switch + forms */}
+                    {/* Right column: elegant form */}
                     <div className="w-full max-w-md mx-auto lg:mx-0">
-                      <div className="flex justify-center mb-6 space-x-3">
-                        <button onClick={() => setMode('code')} className={`px-4 py-2 rounded border ${mode==='code' ? 'bg-white text-black' : 'border-gray-600 text-gray-300'}`}>
-                          {language === 'en' ? 'Elite Passcode' : 'Elite Passcode'}
-                        </button>
-                        <button onClick={() => setMode('waitlist')} className={`px-4 py-2 rounded border ${mode==='waitlist' ? 'bg-white text-black' : 'border-gray-600 text-gray-300'}`}>
-                          {language === 'en' ? 'No passcode?' : 'Kein Passcode?'}
-                        </button>
-                      </div>
-
                       {mode === 'code' ? (
                         <div>
                           <h2 className="font-serif-display text-3xl md:text-4xl text-white mb-4">{language==='en' ? 'THE KEY, PLEASE.' : 'DER SCHLÜSSEL, BITTE.'}</h2>
@@ -187,14 +218,24 @@ const PreloaderLanding: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <form onSubmit={submitWaitlist} className="space-y-4">
-                          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={language === 'en' ? 'Email for waitlist' : 'E‑Mail für Warteliste'} className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center" />
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <button disabled={loading || !email} className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">{loading ? (language === 'en' ? 'Sending…' : 'Sende…') : (language === 'en' ? 'Join waitlist' : 'Warteliste beitreten')}</button>
-                            <button type="button" onClick={sendMagicLink} disabled={loading || !email} className="w-full bg-gray-100 text-black py-3 font-semibold rounded disabled:opacity-60">{language === 'en' ? 'Send login link' : 'Login‑Link senden'}</button>
+                        <div>
+                          <h2 className="font-serif-display text-3xl md:text-4xl text-white mb-4">{language==='en' ? 'JOIN THE CIRCLE.' : 'DEM KREIS BEITRETEN.'}</h2>
+                          <form onSubmit={submitWaitlist} className="space-y-4">
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={language === 'en' ? 'Email for waitlist' : 'E‑Mail für Warteliste'} className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center" />
+                            <button disabled={loading || !email} className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
+                              {loading ? (language === 'en' ? 'Sending…' : 'Sende…') : 
+                               (emailExists === true ? 
+                                (language === 'en' ? 'Send Magic Link' : 'Magic Link senden') : 
+                                (language === 'en' ? 'Join waitlist' : 'Warteliste beitreten'))}
+                            </button>
+                          </form>
+                          <div className="mt-3 text-center">
+                            <button type="button" onClick={() => setMode('code')} className="text-gray-400 hover:text-gray-200 underline text-sm">
+                              {language==='en' ? 'Have a passcode? Enter it here' : 'Passcode vorhanden? Hier eingeben'}
+                            </button>
                           </div>
-                          <p className="text-xs text-gray-500 text-center">{language === 'en' ? 'By joining or requesting a login link you agree to our privacy policy.' : 'Mit Klick stimmst du unserer Datenschutzerklärung zu.'}</p>
-                        </form>
+                          <p className="text-xs text-gray-500 text-center mt-4">{language === 'en' ? 'By joining you agree to our privacy policy.' : 'Mit Klick stimmst du unserer Datenschutzerklärung zu.'}</p>
+                        </div>
                       )}
 
                       {message && <p className="text-green-400 text-center mt-4">{message}</p>}
