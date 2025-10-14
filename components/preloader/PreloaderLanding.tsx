@@ -3,6 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import KLogo from './KLogo';
 import MedusaLoader from './MedusaLoader';
 import ScrollIndicator from './ScrollIndicator';
+import Footer from '../Footer';
 
 const API_BASE = 'https://kinkly-backend.onrender.com';
 
@@ -18,6 +19,7 @@ const PreloaderLanding: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [emailExists, setEmailExists] = useState<boolean | null>(null);
+  const [showFooter, setShowFooter] = useState(false);
 
   const SCROLL_TRIGGER_DISTANCE = 50;
 
@@ -174,6 +176,18 @@ const PreloaderLanding: React.FC = () => {
     setLanguage(language === 'en' ? 'de' : 'en');
   };
 
+  const handleDatenschutzClick = () => {
+    setShowFooter(true);
+  };
+
+  const handleImpressumClick = () => {
+    setShowFooter(true);
+  };
+
+  const handleAGBClick = () => {
+    setShowFooter(true);
+  };
+
   return (
     <main className="bg-black min-h-screen text-gray-300 relative overflow-x-hidden">
       {/* Language Toggle - always visible */}
@@ -195,7 +209,7 @@ const PreloaderLanding: React.FC = () => {
           {/* Overlay content area */}
           <div className={`fixed inset-0 z-30 ${phase === 'formVisible' ? 'pointer-events-auto' : 'pointer-events-none'}`}>
             <div className="h-full w-full overflow-y-auto overscroll-contain scrollbar-none">
-              <div className="min-h-full flex flex-col items-center justify-center pt-[10vh] pb-8 space-y-8">
+                  <div className={`min-h-full flex flex-col items-center justify-center pb-8 space-y-8 transition-all duration-500 ease-in-out ${showFooter ? 'pt-[5vh]' : 'pt-[10vh]'}`}>
                 {/* Medusa shows from loading onwards */}
                 <div className={`flex items-center justify-center transition-opacity duration-[2000ms] ease-out ${phase === 'loading' || phase === 'formVisible' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                   <MedusaLoader />
@@ -250,7 +264,13 @@ const PreloaderLanding: React.FC = () => {
                               {language==='en' ? 'Have a passcode? Enter it here' : 'Passcode vorhanden? Hier eingeben'}
                             </button>
                           </div>
-                          <p className="text-xs text-gray-500 text-center mt-4">{language === 'en' ? 'By joining you agree to our privacy policy.' : 'Mit Klick stimmst du unserer Datenschutzerklärung zu.'}</p>
+                          <p className="text-xs text-gray-500 text-center mt-4">
+                            {language === 'en' ? 'By joining you agree to our ' : 'Mit Klick stimmst du unserer '}
+                            <button onClick={handleDatenschutzClick} className="underline hover:text-gray-300">
+                              {language === 'en' ? 'privacy policy' : 'Datenschutzerklärung'}
+                            </button>
+                            .
+                          </p>
                         </div>
                       )}
 
@@ -263,13 +283,25 @@ const PreloaderLanding: React.FC = () => {
             </div>
           </div>
 
-          {/* Scroll indicator only before scroll */}
-          {phase === 'initial' && <ScrollIndicator />}
-        </div>
-      </div>
-    </main>
-  );
-};
+              {/* Scroll indicator only before scroll */}
+              {phase === 'initial' && <ScrollIndicator />}
+            </div>
+          </div>
+          
+          {/* Footer appears when privacy policy is clicked */}
+          {showFooter && (
+            <div className="transition-all duration-500 ease-in-out">
+              <Footer 
+                onImpressumClick={handleImpressumClick}
+                onDatenschutzClick={handleDatenschutzClick}
+                onAGBClick={handleAGBClick}
+                showInstagram={false}
+              />
+            </div>
+          )}
+        </main>
+      );
+    };
 
 export default PreloaderLanding;
 
