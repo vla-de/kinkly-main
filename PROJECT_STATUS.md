@@ -220,5 +220,59 @@ Das Projekt ist **bereit für den Live-Gang** mit allen gewünschten Kernfunktio
 
 ---
 
-*Letzte Aktualisierung: $(date)*
-*Status: Live-Ready mit offenen TODOs für erweiterte Features*
+## 🔁 Finaler UX- & Logik-Flow (Elite Passcode + Magic Link)
+
+### Begrifflichkeiten
+- **Elite Passcode**: Zugangscode (ehem. Referral Code)
+- **Magic Link**: Passwortloser Login (15 Min gültig), setzt sichere Session-Cookies (14 Tage)
+- **Prospect**: Interessent vor dem Kauf (E‑Mail/Name erfasst, optional Code validiert)
+
+### Zustände
+- Unbekannt, Prospect, Warteliste, Referrer (Werber), Käufer, Admin
+
+### Flows (kompakt)
+1) Mit Elite Passcode
+   - Preloader → Code validieren (keine Zählung) → optional E‑Mail/Name erfassen (Prospect) → Redirect Event-Seite `?elitePasscode=` → Session speichern → Ticket-Flow.
+2) Ohne Elite Passcode
+   - Preloader → Warteliste (Vorname/Nachname/E‑Mail) Upsert → Feedback + optional “Login-Link senden”.
+3) E‑Mail existiert
+   - Sofort “Magic Link senden?” (Rate-Limit) → Login, Cookie 14 Tage.
+4) Nach Login
+   - Warteliste/Prospect: Profil-Panel + “Elite Passcode hinzufügen”.
+   - Referrer: Mini-Dashboard (Geworben gesamt, davon mit Kauf). Optional Live-Updates.
+   - Käufer: Bestell-/Zahlstatus.
+5) Passcode nachträglich
+   - Nach Login hinzufügen → Validierung → Verknüpfung → Bestätigungsmail.
+6) Zählung/Analytics
+   - Nur beim Kauf (Stripe/PayPal Webhooks). Validierung zählt nicht.
+
+### Sicherheit & DSGVO
+- Magic Link 15 Min; Session-Cookies: HTTP-only, Secure, SameSite=Strict, 14 Tage.
+- E‑Mail‑Verifikation optional vor Kauf erzwingen.
+- GDPR-Hinweis in jeder E-Mail (“Durch Klick stimmst du unserer Datenschutzerklärung zu”).
+
+### Admin-Optimierung
+- “Users” kompakter; Code-Zuweisung per Dropdown; Invite/Passcode‑Mail aus Admin mit Custom Message.
+
+---
+
+## 📌 Umsetzungsplan (Next Sprint)
+1) Backend
+   - [ ] POST `/api/user/add-passcode` (auth): Elite Passcode an eingeloggten Nutzer binden
+   - [ ] GET `/api/user/referrer-stats` (auth): eigene Kennzahlen (geworben / mit Kauf)
+   - [ ] Rate-Limiting für `/api/auth/request-magic-link` (z. B. 3/h je E‑Mail)
+   - [ ] Optional: `prospects`-Tabelle für Pre‑Kauf‑Tracking
+2) Preloader
+   - [ ] Nach Code-Validierung optionales E‑Mail/Name Capture + CTA “Login-Link senden”
+   - [ ] Besseres Feedback bei bestehenden E‑Mails (direkt Magic Link senden)
+3) Event-Seite
+   - [ ] Profil-Panel nach Login (Status, “Elite Passcode hinzufügen” Feld)
+   - [ ] Kleines Referrer-Panel (Geworben gesamt / mit Kauf)
+4) Admin
+   - [ ] Code-Zuweisung an Warteliste im “Users”-Tab (Dropdown)
+   - [ ] Invite-Modal: Templates & Speicherung (Follow-up)
+
+---
+
+*Letzte Aktualisierung: 2025-10-14*
+*Status: Live-Ready; nächster Sprint fokussiert UX‑Finalisierung & Auth‑Flows*

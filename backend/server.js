@@ -9,6 +9,7 @@ import { Pool } from 'pg'; // Import the pg Pool class directly
 // E-Mail-Versand mit Resend
 import { Resend } from 'resend';
 import crypto from 'crypto';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
@@ -394,6 +395,7 @@ const paypalClient = new paypal.core.PayPalHttpClient(
 
 // 3. Middleware
 app.use(cors({ origin: '*' }));
+app.use(cookieParser());
 
 // Middleware to verify Stripe webhook signature
 const verifyStripeSignature = (req, res, next) => {
@@ -551,6 +553,15 @@ app.post('/api/auth/request-magic-link', async (req, res) => {
   const { email, redirectUrl } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
   try {
+    // Rate limit: max 3 per hour per email
+    const rate = await pool.query(
+      `SELECT COUNT(*)::int as cnt FROM magic_links WHERE email = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+      [email]
+    );
+    if ((rate.rows[0]?.cnt || 0) >= 3) {
+      return res.status(429).json({ error: 'Too many requests. Try again later.' });
+    }
+
     const token = crypto.randomBytes(24).toString('base64url');
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
     await pool.query(
@@ -603,6 +614,74 @@ app.get('/api/auth/magic-login', async (req, res) => {
   } catch (e) {
     console.error('magic-login error:', e);
     res.status(500).send('Login failed');
+  }
+});
+
+// --- User: link elite passcode to logged-in user (waitlist/prospect association) ---
+app.post('/api/user/add-passcode', authenticateUser, async (req, res) => {
+  const { code } = req.body || {};
+  if (!code) return res.status(400).json({ error: 'Code is required' });
+  try {
+    // Validate code is usable
+    const rc = await pool.query(`
+      SELECT id FROM referral_codes
+      WHERE code = $1 AND is_active = true AND (expires_at IS NULL OR expires_at > NOW())
+    `, [code.trim().toUpperCase()]);
+    if (rc.rows.length === 0) return res.status(400).json({ error: 'Invalid or inactive code' });
+
+    // Link to waitlist entry for this user's email (if exists)
+    // Find user email
+    const u = await pool.query(`SELECT email FROM users WHERE id = $1`, [req.user.uid]);
+    const userEmail = u.rows[0]?.email;
+    if (!userEmail) return res.status(404).json({ error: 'User not found' });
+
+    await pool.query(`
+      INSERT INTO waitlist (first_name, last_name, email, referral_code)
+      VALUES ('', '', $1, $2)
+      ON CONFLICT (email) DO UPDATE SET referral_code = EXCLUDED.referral_code
+    `, [userEmail, code.trim().toUpperCase()]);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('add-passcode error:', e);
+    res.status(500).json({ error: 'Failed to add passcode' });
+  }
+});
+
+// --- Referrer stats for logged-in user ---
+app.get('/api/user/referrer-stats', authenticateUser, async (req, res) => {
+  try {
+    // Determine application id(s) owned by this user's email
+    const ue = await pool.query(`SELECT email FROM users WHERE id = $1`, [req.user.uid]);
+    const email = ue.rows[0]?.email;
+    if (!email) return res.status(404).json({ error: 'User not found' });
+
+    // Find referral codes where owner application email matches
+    const codes = await pool.query(`
+      SELECT rc.id
+      FROM referral_codes rc
+      JOIN applications a ON rc.user_id = a.id
+      WHERE a.email = $1
+    `, [email]);
+
+    if (codes.rows.length === 0) return res.json({ totalReferred: 0, totalWithPurchase: 0 });
+
+    const codeIds = codes.rows.map(r => r.id);
+    const inList = codeIds.map((_, i) => `$${i + 1}`).join(',');
+
+    const totals = await pool.query(
+      `SELECT 
+         COUNT(*)::int as total,
+         COUNT(CASE WHEN status IN ('pending_review','approved') THEN 1 END)::int as with_purchase
+       FROM applications
+       WHERE referral_code_id IN (${inList})`,
+      codeIds
+    );
+
+    res.json({ totalReferred: totals.rows[0]?.total || 0, totalWithPurchase: totals.rows[0]?.with_purchase || 0 });
+  } catch (e) {
+    console.error('referrer-stats error:', e);
+    res.status(500).json({ error: 'Failed to load stats' });
   }
 });
 
