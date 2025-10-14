@@ -226,7 +226,7 @@ const PreloaderLanding: React.FC = () => {
           {/* Overlay content area */}
           <div className={`fixed inset-0 z-30 ${phase === 'formVisible' ? 'pointer-events-auto' : 'pointer-events-none'}`}>
             <div className="h-full w-full overflow-y-auto overscroll-contain scrollbar-none">
-                  <div className={`min-h-full flex flex-col items-center justify-center pb-8 space-y-8 transition-all duration-500 ease-in-out ${showFooter ? 'pt-[5vh]' : 'pt-[10vh]'}`}>
+                  <div className={`min-h-full flex flex-col items-center justify-center pb-8 space-y-8 transition-all duration-500 ease-in-out ${showFooter ? 'pt-[5vh] pb-32' : 'pt-[10vh]'}`}>
                 {/* Medusa shows from loading onwards */}
                 <div className={`flex items-center justify-center transition-opacity duration-[2000ms] ease-out ${phase === 'loading' || phase === 'formVisible' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                   <MedusaLoader />
@@ -295,6 +295,17 @@ const PreloaderLanding: React.FC = () => {
                       {error && <p className="text-red-400 text-center mt-4">{error}</p>}
                     </div>
                   </div>
+                  
+                  {/* Footer appears when privacy policy is clicked */}
+                  {showFooter && (
+                    <div className="w-full mt-16 transition-all duration-500 ease-in-out">
+                      <Footer 
+                        onImpressumClick={handleImpressumClick}
+                        onDatenschutzClick={handleDatenschutzClick}
+                        onAGBClick={handleAGBClick}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -304,17 +315,6 @@ const PreloaderLanding: React.FC = () => {
               {phase === 'initial' && <ScrollIndicator />}
             </div>
           </div>
-          
-          {/* Footer appears when privacy policy is clicked */}
-          {showFooter && (
-            <div className="transition-all duration-500 ease-in-out">
-              <Footer 
-                onImpressumClick={handleImpressumClick}
-                onDatenschutzClick={handleDatenschutzClick}
-                onAGBClick={handleAGBClick}
-              />
-            </div>
-          )}
         </main>
       );
     };
