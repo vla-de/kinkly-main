@@ -52,6 +52,24 @@
         filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.4));
         transform: scale(1.05);
       }
+      /* K logo animation: outline -> fill */
+      @keyframes k-fill {
+        0% { color: transparent; }
+        100% { color: #ffffff; }
+      }
+      .k-logo-outline {
+        color: transparent;
+        -webkit-text-stroke: 1.2px rgba(255,255,255,0.8);
+        text-shadow: 0 0 0 rgba(255,255,255,0);
+        animation: k-fill 1.2s ease forwards 1s;
+      }
+      @keyframes k-glow {
+        0%,100% { text-shadow: 0 0 0 rgba(255,255,255,0); }
+        50% { text-shadow: 0 0 18px rgba(255,255,255,0.25); }
+      }
+      @keyframes k-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+      .k-logo-animate { animation: k-glow 3s ease-in-out infinite, k-float 6s ease-in-out infinite; }
+      .k-logo-scrolled { opacity: .85; transform: translateY(0) scale(.95); transition: transform .25s ease, opacity .25s ease; }
       @keyframes k-glow {
         0%, 100% { text-shadow: 0 0 0 rgba(255,255,255,0); filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
         50% { text-shadow: 0 0 18px rgba(255,255,255,0.25); filter: drop-shadow(0 0 18px rgba(255,255,255,0.15)); }
@@ -101,6 +119,15 @@
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
+    <script>
+      // shrink the K subtly on scroll (desktop)
+      window.addEventListener('scroll', () => {
+        const el = document.querySelector('.k-logo-animate');
+        if (!el) return;
+        if (window.scrollY > 120) el.classList.add('k-logo-scrolled');
+        else el.classList.remove('k-logo-scrolled');
+      });
+    </script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
