@@ -51,7 +51,7 @@ const Footer: React.FC<FooterProps> = ({ onImpressumClick, onDatenschutzClick, o
       <div className="container mx-auto px-6 flex flex-col sm:flex-row justify-between items-center text-center">
         <div className="text-sm text-gray-600 mb-4 sm:mb-0">
           <span 
-            className="cursor-pointer transition-all duration-300 hover:text-white"
+            className="cursor-default transition-all duration-300 hover:text-white"
             onMouseEnter={animateText}
           >
             {brandText}
