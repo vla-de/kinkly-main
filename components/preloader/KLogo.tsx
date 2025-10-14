@@ -9,6 +9,33 @@ interface KLogoProps {
 
 const KLogo: React.FC<KLogoProps> = ({ phase, onTransitionEnd }) => {
   const isDocked = phase === 'docking' || phase === 'loading' || phase === 'formVisible';
+  
+  // Bass sound for heartbeat
+  React.useEffect(() => {
+    if (!isDocked) return;
+    
+    const playBass = () => {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(60, audioContext.currentTime); // Deep bass
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.1);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    };
+    
+    const interval = setInterval(playBass, 2000); // Every 2 seconds
+    return () => clearInterval(interval);
+  }, [isDocked]);
 
   const transformClasses = isDocked
     ? 'scale-[0.12] sm:scale-[0.14] md:scale-[0.15] translate-x-[calc(50vw-4rem)] -translate-y-[calc(50vh-4rem)] sm:translate-x-[calc(50vw-5rem)] sm:-translate-y-[calc(50vh-5rem)]'
@@ -29,19 +56,24 @@ const KLogo: React.FC<KLogoProps> = ({ phase, onTransitionEnd }) => {
             opacity: .6; 
             background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='.8'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat;
           } 
-          50% { 
-            transform: scale(1.8); 
-            opacity: .4; 
+          30% { 
+            transform: scale(1.4); 
+            opacity: .5; 
             background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Cormorant, serif' font-weight='400' font-size='94' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='.8'%3EK%3C/text%3E%3C/svg%3E") center/contain no-repeat;
+          }
+          60% { 
+            transform: scale(2.2); 
+            opacity: .3; 
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cellipse cx='50' cy='50' rx='35' ry='25' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='1.2'/%3E%3C/svg%3E") center/contain no-repeat;
           }
           100% { 
             transform: scale(3.2); 
             opacity: 0; 
-            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='1.5'/%3E%3C/svg%3E") center/contain no-repeat;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='1.5'/%3E%3C/svg%3E") center/contain no-repeat;
           } 
         }
-        .k-pulse { animation: heartbeat-double 2.1s ease-in-out infinite; }
-        .animate-k-ripples::before,.animate-k-ripples::after { content:''; position:absolute; top:0; left:0; width:100%; height:100%; animation:k-to-circle-ripple 2.1s ease-out infinite; opacity:0; transform-origin: 35% 50%; }
+        .k-pulse { animation: heartbeat-double 2s ease-in-out infinite; }
+        .animate-k-ripples::before,.animate-k-ripples::after { content:''; position:absolute; top:0; left:0; width:100%; height:100%; animation:k-to-circle-ripple 2s ease-out infinite; opacity:0; transform-origin: 35% 50%; }
         .animate-k-ripples::before { animation-delay:0.2s; }
         .animate-k-ripples::after { animation-delay:0.6s; }
         .k-outline { font-family:'Cormorant', serif; font-weight:400; font-size:94px; fill:none; stroke:#404040; stroke-width:1.2; stroke-dasharray:2000; stroke-dashoffset:2000; animation:draw-k 2.5s cubic-bezier(0.68,-0.55,0.27,1.55) forwards; }
