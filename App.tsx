@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [magicLinkError, setMagicLinkError] = useState<string | null>(null);
 
   const handleOpenLogin = () => setActiveModal('login');
   const handleCloseModal = () => setActiveModal(null);
@@ -59,7 +60,7 @@ const App: React.FC = () => {
   const handleOpenDatenschutz = () => setActiveModal('datenschutz');
   const handleOpenWaitlist = () => setActiveModal('waitlist');
 
-  // Check for admin access on component mount
+  // Check for admin access and magic link errors on component mount
   useEffect(() => {
     const checkAdminAccess = () => {
       const path = window.location.pathname;
@@ -68,6 +69,28 @@ const App: React.FC = () => {
       }
     };
     checkAdminAccess();
+
+    // Check for magic link error parameters
+    const checkMagicLinkError = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+      if (error) {
+        const errorMessages: { [key: string]: string } = {
+          'missing_token': 'Login-Link ist unvollständig. Bitte fordern Sie einen neuen Link an.',
+          'invalid_token': 'Login-Link ist ungültig. Bitte fordern Sie einen neuen Link an.',
+          'token_used': 'Dieser Login-Link wurde bereits verwendet. Bitte fordern Sie einen neuen Link an.',
+          'token_expired': 'Login-Link ist abgelaufen. Bitte fordern Sie einen neuen Link an.',
+          'login_failed': 'Login fehlgeschlagen. Bitte versuchen Sie es erneut.'
+        };
+        setMagicLinkError(errorMessages[error] || 'Ein unbekannter Fehler ist aufgetreten.');
+        
+        // Clean up URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('error');
+        window.history.replaceState({}, '', newUrl.toString());
+      }
+    };
+    checkMagicLinkError();
 
     // Listen for custom events from cookie consent
     const handleOpenModal = (event: CustomEvent) => {
@@ -118,6 +141,22 @@ const App: React.FC = () => {
   return (
     <div className="bg-black min-h-screen text-gray-300 font-sans antialiased relative">
       <Header onLoginClick={handleOpenLogin} />
+      
+      {/* Magic Link Error Banner */}
+      {magicLinkError && (
+        <div className="bg-red-900/20 border border-red-500/30 text-red-300 px-4 py-3 text-center">
+          <div className="container mx-auto flex items-center justify-between">
+            <span className="text-sm">{magicLinkError}</span>
+            <button 
+              onClick={() => setMagicLinkError(null)}
+              className="text-red-400 hover:text-red-200 ml-4"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      
       <main>
         <ProfilePanel />
         <HeroSection onTicketClick={handleOpenReferral} />

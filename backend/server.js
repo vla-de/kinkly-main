@@ -600,13 +600,21 @@ app.post('/api/auth/request-magic-link', async (req, res) => {
 
 app.get('/api/auth/magic-login', async (req, res) => {
   const { token, redirect } = req.query;
-  if (!token) return res.status(400).send('Missing token');
+  if (!token) {
+    return res.redirect('https://kinkly-main.vercel.app/event?error=missing_token');
+  }
   try {
     const r = await pool.query(`SELECT * FROM magic_links WHERE token = $1`, [token]);
-    if (r.rows.length === 0) return res.status(400).send('Invalid token');
+    if (r.rows.length === 0) {
+      return res.redirect('https://kinkly-main.vercel.app/event?error=invalid_token');
+    }
     const ml = r.rows[0];
-    if (ml.used_at) return res.status(400).send('Token already used');
-    if (new Date(ml.expires_at).getTime() < Date.now()) return res.status(400).send('Token expired');
+    if (ml.used_at) {
+      return res.redirect('https://kinkly-main.vercel.app/event?error=token_used');
+    }
+    if (new Date(ml.expires_at).getTime() < Date.now()) {
+      return res.redirect('https://kinkly-main.vercel.app/event?error=token_expired');
+    }
 
     // Ensure user exists
     const userRes = await pool.query(`
@@ -625,7 +633,7 @@ app.get('/api/auth/magic-login', async (req, res) => {
     res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app/event');
   } catch (e) {
     console.error('magic-login error:', e);
-    res.status(500).send('Login failed');
+    res.redirect('https://kinkly-main.vercel.app/event?error=login_failed');
   }
 });
 
