@@ -1,12 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const LoginForm: React.FC = () => {
   const { t } = useLanguage();
-  const handleSubmit = (e: React.FormEvent) => {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    alert('Login functionality to be implemented.');
+    setStatus('sending');
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/request-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, redirectUrl: window.location.origin })
+      });
+      if (res.ok) {
+        setStatus('sent');
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Failed to send login link');
+        setStatus('error');
+      }
+    } catch (err) {
+      setError('Network error');
+      setStatus('error');
+    }
   };
 
   return (
@@ -20,27 +41,18 @@ const LoginForm: React.FC = () => {
             id="email"
             name="email"
             required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
           />
         </div>
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-400">{t.login_password_label}</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            required
-            className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
-          />
-        </div>
-        <div>
-          <button type="submit" className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider">
-            {t.login_button}
+          <button type="submit" disabled={status==='sending'||status==='sent'} className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider disabled:opacity-60">
+            {status==='sent' ? 'Link gesendet' : t.login_button}
           </button>
         </div>
-        <div className="text-center">
-          <a href="#" className="text-xs text-gray-500 hover:text-gray-300">{t.login_forgot_password}</a>
-        </div>
+        {error && <p className="text-center text-sm text-red-400">{error}</p>}
+        {status==='sent' && <p className="text-center text-sm text-green-400">Checke deine E-Mail für den Login-Link.</p>}
       </form>
     </div>
   );

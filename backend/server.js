@@ -8,12 +8,14 @@ import { Pool } from 'pg'; // Import the pg Pool class directly
 
 // E-Mail-Versand mit Resend
 import { Resend } from 'resend';
+import crypto from 'crypto';
 
 dotenv.config();
 
 // 2. Initialisierung
 const app = express();
 const PORT = process.env.PORT || 4242;
+const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_session_secret_change_me';
 
 // E-Mail-Client-Initialisierung
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -479,6 +481,54 @@ app.post('/api/stripe-webhook', express.raw({type: 'application/json'}), verifyS
 // JSON-Parser für alle anderen Routen
 app.use(express.json());
 
+// --- Simple HMAC-signed session tokens (no external deps) ---
+const signToken = (payload) => {
+  const data = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig = crypto
+    .createHmac('sha256', SESSION_SECRET)
+    .update(data)
+    .digest('base64url');
+  return `${data}.${sig}`;
+};
+
+const verifyToken = (token) => {
+  if (!token || typeof token !== 'string' || !token.includes('.')) return null;
+  const [data, sig] = token.split('.');
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(data).digest('base64url');
+  if (sig !== expected) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(data, 'base64url').toString());
+    if (payload.exp && Date.now() > payload.exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+};
+
+const setSessionCookie = (res, payload) => {
+  const token = signToken(payload);
+  res.cookie('kinkly_session', token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+  });
+};
+
+// Minimal auth middlewares
+const authenticateUser = (req, res, next) => {
+  const raw = req.headers['authorization']?.replace('Bearer ', '') || req.cookies?.kinkly_session;
+  const payload = verifyToken(raw);
+  if (!payload) return res.status(401).json({ error: 'Not authenticated' });
+  req.user = payload; // { uid, role }
+  next();
+};
+
+const authorizeRole = (roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) return res.status(403).json({ error: 'Forbidden' });
+  next();
+};
+
 // 4. Hilfsfunktionen
 const calculateOrderAmount = (priceString) => {
   if (!priceString) return 0;
@@ -494,6 +544,110 @@ const calculateOrderAmount = (priceString) => {
 // Health endpoints to help diagnose deployment issues
 app.get('/health', (req, res) => {
   res.json({ ok: true, env: process.env.NODE_ENV || 'development' });
+});
+
+// --- Auth: Magic link flow ---
+app.post('/api/auth/request-magic-link', async (req, res) => {
+  const { email, redirectUrl } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+  try {
+    const token = crypto.randomBytes(24).toString('base64url');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    await pool.query(
+      `INSERT INTO magic_links (email, token, expires_at) VALUES ($1, $2, $3)`,
+      [email, token, expiresAt]
+    );
+
+    const loginUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/magic-login?token=${token}&redirect=${encodeURIComponent(
+      redirectUrl || 'https://kinkly-main.vercel.app'
+    )}`;
+
+    await sendEmail(
+      email,
+      'Your secure login link',
+      `<p>Click to login: <a href="${loginUrl}">Login</a> (valid 15 minutes)</p>`,
+      `Login: ${loginUrl} (valid 15 minutes)`
+    );
+    res.json({ success: true });
+  } catch (e) {
+    console.error('request-magic-link error:', e);
+    res.status(500).json({ error: 'Failed to create magic link' });
+  }
+});
+
+app.get('/api/auth/magic-login', async (req, res) => {
+  const { token, redirect } = req.query;
+  if (!token) return res.status(400).send('Missing token');
+  try {
+    const r = await pool.query(`SELECT * FROM magic_links WHERE token = $1`, [token]);
+    if (r.rows.length === 0) return res.status(400).send('Invalid token');
+    const ml = r.rows[0];
+    if (ml.used_at) return res.status(400).send('Token already used');
+    if (new Date(ml.expires_at).getTime() < Date.now()) return res.status(400).send('Token expired');
+
+    // Ensure user exists
+    const userRes = await pool.query(`
+      INSERT INTO users (email)
+      VALUES ($1)
+      ON CONFLICT (email) DO UPDATE SET updated_at = NOW()
+      RETURNING id, email, role
+    `, [ml.email]);
+    const user = userRes.rows[0];
+
+    // Mark used
+    await pool.query(`UPDATE magic_links SET used_at = NOW() WHERE id = $1`, [ml.id]);
+
+    // Set session cookie
+    setSessionCookie(res, { uid: user.id, role: user.role, exp: Date.now() + 1000 * 60 * 60 * 24 * 7 });
+    res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app');
+  } catch (e) {
+    console.error('magic-login error:', e);
+    res.status(500).send('Login failed');
+  }
+});
+
+// --- Auth: Email verification flow ---
+app.post('/api/auth/request-email-verification', async (req, res) => {
+  const { email, redirectUrl } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+  try {
+    const token = crypto.randomBytes(24).toString('base64url');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+    await pool.query(
+      `INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)`,
+      [email, token, expiresAt]
+    );
+    const verifyUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/verify-email?token=${token}&redirect=${encodeURIComponent(
+      redirectUrl || 'https://kinkly-main.vercel.app'
+    )}`;
+    await sendEmail(
+      email,
+      'Verify your email address',
+      `<p>Confirm your email: <a href="${verifyUrl}">Verify</a> (valid 24h)</p>`,
+      `Verify: ${verifyUrl} (valid 24h)`
+    );
+    res.json({ success: true });
+  } catch (e) {
+    console.error('request-email-verification error:', e);
+    res.status(500).json({ error: 'Failed to create verification' });
+  }
+});
+
+app.get('/api/auth/verify-email', async (req, res) => {
+  const { token, redirect } = req.query;
+  if (!token) return res.status(400).send('Missing token');
+  try {
+    const r = await pool.query(`SELECT * FROM email_verifications WHERE token = $1`, [token]);
+    if (r.rows.length === 0) return res.status(400).send('Invalid token');
+    const ev = r.rows[0];
+    if (ev.verified_at) return res.status(400).send('Already verified');
+    if (new Date(ev.expires_at).getTime() < Date.now()) return res.status(400).send('Token expired');
+    await pool.query(`UPDATE email_verifications SET verified_at = NOW() WHERE id = $1`, [ev.id]);
+    res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app');
+  } catch (e) {
+    console.error('verify-email error:', e);
+    res.status(500).send('Verification failed');
+  }
 });
 
 app.get('/db/health', async (req, res) => {
