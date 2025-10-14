@@ -48,18 +48,34 @@ const Countdown: React.FC<CountdownProps> = ({ targetDate }) => {
     let glitchTimeout: ReturnType<typeof setTimeout>;
 
     const scheduleGlitch = () => {
-      const delay = Math.random() * 1000 + 2500; // Random delay between 3-7 seconds
+      const delay = Math.random() * 3000 + 2000; // Random delay between 2-5 seconds
       glitchTimeout = setTimeout(triggerGlitch, delay);
     };
 
     const triggerGlitch = () => {
       if (Object.keys(timeLeft).length === 0) return;
 
-      const glitchValue: TimeLeft = {
-        days: Math.floor(Math.random() * 99),
-        hours: Math.floor(Math.random() * 24),
-        minutes: Math.floor(Math.random() * 60),
-      };
+      // Random glitch type: 0 = all values, 1 = days only, 2 = hours only, 3 = minutes only
+      const glitchType = Math.floor(Math.random() * 4);
+      
+      const glitchValue: TimeLeft = { ...timeLeft }; // Start with correct values
+      
+      if (glitchType === 0) {
+        // All values glitch
+        glitchValue.days = Math.floor(Math.random() * 99);
+        glitchValue.hours = Math.floor(Math.random() * 24);
+        glitchValue.minutes = Math.floor(Math.random() * 60);
+      } else if (glitchType === 1) {
+        // Only days glitch
+        glitchValue.days = Math.floor(Math.random() * 99);
+      } else if (glitchType === 2) {
+        // Only hours glitch
+        glitchValue.hours = Math.floor(Math.random() * 24);
+      } else if (glitchType === 3) {
+        // Only minutes glitch
+        glitchValue.minutes = Math.floor(Math.random() * 60);
+      }
+      
       setDisplayTimeLeft(glitchValue);
 
       // Revert to the correct time after a short duration

@@ -23,7 +23,7 @@ const Footer: React.FC<FooterProps> = ({ onImpressumClick, onDatenschutzClick, o
     
     let currentText = '2025 KINKLY';
     const steps = 20;
-    const stepDuration = 200; // 4s total / 20 steps = 200ms per step
+    const stepDuration = 150; // 4s total / 20 steps = 200ms per step
     
     for (let i = 0; i < steps; i++) {
       setTimeout(() => {
