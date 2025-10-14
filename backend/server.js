@@ -960,6 +960,28 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Delete user (super admin only)
+app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+    
+    // Check if current user is super admin
+    const adminUser = await pool.query('SELECT role FROM users WHERE id = $1', [req.user.uid]);
+    if (!adminUser.rows[0] || adminUser.rows[0].role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only super admin can delete users' });
+    }
+    
+    await pool.query('DELETE FROM applications WHERE id = $1', [userId]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 // Create new user
 app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
   const { firstName, lastName, email, message, tier } = req.body;

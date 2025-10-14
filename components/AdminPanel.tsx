@@ -12,6 +12,7 @@ interface User {
   is_referrer: boolean;
   created_at: string;
   referral_count?: number;
+  role?: string; // super_admin, admin, elite, circle, anwerber, warteliste
 }
 
 interface ReferralCode {
@@ -48,6 +49,7 @@ const AdminPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string>('admin'); // Get from auth
 
   // Fetch data based on active tab
   useEffect(() => {
@@ -188,6 +190,29 @@ const AdminPanel: React.FC = () => {
       }
     } catch (err) {
       console.error('Error updating user:', err);
+    }
+  };
+
+  const deleteUser = async (userId: number) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        fetchData();
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to delete user');
+      }
+    } catch (error) {
+      setError('Network error');
     }
   };
 
@@ -357,7 +382,7 @@ const AdminPanel: React.FC = () => {
                             {user.is_referrer ? 'Referrer' : 'User'}
                           </span>
                         </td>
-                        <td className="py-3 px-4">{user.referral_count || 0}</td>
+                        <td className="py-3 px-4">{user.referral_count || 0} Codes/Logins</td>
                         <td className="py-3 px-4">{new Date(user.created_at).toLocaleDateString()}</td>
                         <td className="py-3 px-4">
                           <div className="flex space-x-1">
@@ -367,6 +392,14 @@ const AdminPanel: React.FC = () => {
                             >
                               Edit
                             </button>
+                            {currentUserRole === 'super_admin' && (
+                              <button 
+                                onClick={() => deleteUser(user.id)}
+                                className="btn-exclusive bg-red-600 hover:bg-red-700 px-3 py-1 text-xs"
+                              >
+                                Delete
+                              </button>
+                            )}
                             <button 
                               onClick={() => createReferralCode(user.id, 10)}
                               className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs"
