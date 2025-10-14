@@ -12,21 +12,21 @@ To create a luxurious, mystical user experience for an exclusive, high-end event
 
 This is the primary journey for an invited guest.
 
-### Step 1: The Gate (Serpent Token Entry) ✅ IMPLEMENTED
+### Step 1: The Gate (Elite Passcode Entry) ✅ IMPLEMENTED
 
 The user lands on a page that is intentionally sparse and mysterious. The only immediate action is to prove their right to enter.
 
 **UI Implementation:**
 - **Logo:** "K" in Cormorant SemiBold font with solid white fill
 - **Title:** "DER SCHLÜSSEL, BITTE." (German) / "THE KEY, PLEASE." (English)
-- **Input:** Serpent Token field (formerly Referral Code)
+- **Input:** Elite Passcode field (formerly Referral Code)
 - **Button:** "EINTRETEN" (German) / "ENTER" (English)
 - **Fallback:** "Kein Token? Warteliste beitreten" / "No token? Join the waitlist"
 
-- **Action:** User enters their Serpent Token and clicks "EINTRETEN".
+- **Action:** User enters their Elite Passcode and clicks "EINTRETEN".
 - **Backend:** `POST /api/auth/validate-code`. The backend validates the code, checking its validity, usage count, expiration, and IP/session-based limits.
 - **Success:** If the code is valid, the user is granted access and redirected to the event page.
-- **Failure:** If the code is invalid, error message appears (e.g., "Der Serpent Token passt nicht.").
+- **Failure:** If the code is invalid, error message appears (e.g., "Der Elite Passcode passt nicht.").
 - **Session Management:** IP/session-based tracking prevents code abuse.
 
 ### Step 2: The Sanctum (The Event Unveiled) ✅ IMPLEMENTED
@@ -50,7 +50,7 @@ Once access is granted, the user sees the full landing page with three membershi
 - **Form Data Transfer:** Pre-filled data from landing page (if coming from preloader)
 - **Backend:** `POST /api/applications` creates application record
 - **Payment Options:** Stripe and PayPal integration
-- **Serpent Token Tracking:** Token usage counted only on successful purchase (not validation)
+- **Elite Passcode Tracking:** Code usage counted only on successful purchase (not validation)
 - **Session Management:** IP/session-based limits prevent abuse
 
 ### Step 4: The Affirmation (Confirmation & Onboarding) ✅ IMPLEMENTED
@@ -60,7 +60,7 @@ Once access is granted, the user sees the full landing page with three membershi
 - **Backend Trigger:** Stripe/PayPal webhooks (`POST /api/stripe-webhook`, `POST /api/paypal/capture-order`) process payments
 - **Email System:** Automatic confirmation emails via Resend
 - **Ticket Reduction:** Remaining tickets automatically updated
-- **Referral Tracking:** Serpent Token usage incremented on successful purchase
+- **Referral Tracking:** Elite Passcode usage incremented on successful purchase
 
 ---
 
@@ -69,15 +69,15 @@ Once access is granted, the user sees the full landing page with three membershi
 ### Cross-Project Integration: Landing Page + Event Page
 
 **Landing Page (kinkly-preloader):**
-- **Two-Step Process:** First Serpent Token entry, then waitlist details
+- **Two-Step Process:** First Elite Passcode entry, then waitlist details
 - **Token Validation:** Direct validation and redirect to event page
-- **Waitlist Form:** First name, last name, email, optional Serpent Token
+- **Waitlist Form:** First name, last name, email, optional Elite Passcode
 - **Email Detection:** Automatic recognition of existing emails with auto-fill
 - **Styling:** Anthracite buttons instead of white, English/German support
 
 **Event Page Integration:**
 - **Data Transfer:** Form data transferred via localStorage
-- **URL Parameters:** Serpent Token passed via `?serpentToken=CODE`
+- **URL Parameters:** Elite Passcode passed via `?elitePasscode=CODE`
 - **Session Storage:** Token stored for session persistence
 
 **Backend Integration:**
@@ -91,12 +91,12 @@ Once access is granted, the user sees the full landing page with three membershi
 
 A comprehensive, JWT-protected admin area with full CRUD operations.
 
-### 4.1. User & Serpent Token Management ✅ IMPLEMENTED
+### 4.1. User & Elite Passcode Management ✅ IMPLEMENTED
 - **Admins can:**
     - **Create Users:** Add new users with optional tier assignment or waitlist placement
     - **Edit Users:** Update user details, status, and tier assignments
     - **View Users:** Separate first/last name display, status tracking
-    - **Create Serpent Tokens:** Generate codes with format `[WORD][THREE_DIGITS]` (e.g., `LATEX777`)
+    - **Create Elite Passcodes:** Generate codes with format `[WORD][THREE_DIGITS]` (e.g., `LATEX777`)
     - **Configure Tokens:** Set max uses, expiration dates, referrer assignment
     - **Token Management:** Edit, deactivate, and track usage counts
     - **Referrer Display:** Show referrer names instead of IDs
@@ -138,7 +138,7 @@ A comprehensive, JWT-protected admin area with full CRUD operations.
 ### 5.1. Database Schema ✅ IMPLEMENTED
 - **applications:** User applications with separate first/last names
 - **payments:** Payment records linked to applications
-- **referral_codes:** Serpent tokens with usage tracking
+- **referral_codes:** Elite passcodes with usage tracking
 - **referral_code_usage:** IP/session-based usage tracking
 - **event_settings:** Ticket availability and scarcity management
 - **waitlist:** Cross-project waitlist integration
@@ -172,13 +172,13 @@ A comprehensive, JWT-protected admin area with full CRUD operations.
 
 ### 7.2. Backend Optimizations
 - **Debug Logging:** Comprehensive logging for payment processing and analytics
-- **Session Management:** IP/session-based Serpent Token usage tracking
+- **Session Management:** IP/session-based Elite Passcode usage tracking
 - **Waitlist Integration:** Cross-project database synchronization
 - **Email System:** Production-ready Resend integration
 
 ### 7.3. Admin Panel Enhancements
 - **User Management:** Separate first/last name fields, optional tier assignment
-- **Serpent Token Management:** Full CRUD operations with usage tracking
+- **Elite Passcode Management:** Full CRUD operations with usage tracking
 - **Analytics Dashboard:** Real-time revenue and application statistics
 - **Waitlist Management:** Email invitation system for waitlist members
 
