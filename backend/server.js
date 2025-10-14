@@ -950,22 +950,8 @@ app.post('/api/auth/validate-code', async (req, res) => {
     
     const referralCode = result.rows[0];
     
-    // Check if this IP/session has already used this code
-    const usageCheck = await pool.query(`
-      SELECT id FROM referral_code_usage 
-      WHERE referral_code_id = $1 AND (ip_address = $2 OR session_id = $3)
-    `, [referralCode.id, clientIP, sessionId]);
-    
-    if (usageCheck.rows.length > 0) {
-      return res.status(400).json({ error: 'Dieser Elite Passcode wurde bereits von dieser Session verwendet.' });
-    }
-    
-    // Record this usage attempt (but don't increment used_count yet)
-    await pool.query(`
-      INSERT INTO referral_code_usage (referral_code_id, ip_address, user_agent, session_id)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (referral_code_id, ip_address, session_id) DO NOTHING
-    `, [referralCode.id, clientIP, userAgent, sessionId]);
+    // Note: We no longer block validation by session/IP.
+    // Usage is only incremented on successful purchase in payment handlers.
     
     res.json({ 
       valid: true, 
