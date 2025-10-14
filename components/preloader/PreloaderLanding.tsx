@@ -9,7 +9,7 @@ const API_BASE = 'https://kinkly-backend.onrender.com';
 type AnimationPhase = 'initial' | 'docking' | 'loading' | 'formVisible';
 
 const PreloaderLanding: React.FC = () => {
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const [mode, setMode] = useState<'code' | 'waitlist'>('code');
   const [phase, setPhase] = useState<AnimationPhase>('initial');
   const [elitePasscode, setElitePasscode] = useState('');
@@ -170,8 +170,24 @@ const PreloaderLanding: React.FC = () => {
     return () => clearTimeout(timer);
   }, [email]);
 
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'de' : 'en');
+  };
+
   return (
     <main className="bg-black min-h-screen text-gray-300 relative overflow-x-hidden">
+      {/* Language Toggle - always visible */}
+      <div className="fixed top-4 left-4 z-50">
+        <button
+          onClick={toggleLanguage}
+          className="group inline-flex items-center gap-1 text-[#404040] text-sm bg-white/5 backdrop-blur px-3 py-1.5 rounded-full border border-[#404040]/20 hover:bg-[#404040]/10 transition"
+          aria-label="Toggle language"
+        >
+          <span className="group-hover:hidden">{language.toUpperCase()}</span>
+          <span className="hidden group-hover:inline">{(language === 'en' ? 'DE' : 'EN')}</span>
+        </button>
+      </div>
+      
       <div className="h-[200vh] relative">
         <div className="sticky top-0 h-screen w-full flex flex-col items-center justify-center">
           <KLogo phase={phase} onTransitionEnd={handleKTransitionEnd} />
