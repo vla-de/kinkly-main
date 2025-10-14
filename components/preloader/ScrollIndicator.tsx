@@ -10,7 +10,7 @@ const ScrollIndicator: React.FC = () => {
             opacity: 0.6;
           }
           50% {
-            transform: translateY(8px);
+            transform: translateY(38px);
             opacity: 0.3;
           }
         }
