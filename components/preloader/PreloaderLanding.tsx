@@ -23,6 +23,19 @@ const PreloaderLanding: React.FC = () => {
 
   const SCROLL_TRIGGER_DISTANCE = 50;
 
+  // Load elite passcode from URL on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeFromUrl = urlParams.get('elitePasscode');
+    if (codeFromUrl) {
+      setElitePasscode(codeFromUrl.toUpperCase());
+      // Auto-validate the code from URL
+      setTimeout(() => {
+        validateCodeFromUrl(codeFromUrl.toUpperCase());
+      }, 1000);
+    }
+  }, []);
+
   const handleScroll = useCallback(() => {
     if (window.scrollY > SCROLL_TRIGGER_DISTANCE) {
       setPhase('docking');
@@ -61,6 +74,10 @@ const PreloaderLanding: React.FC = () => {
   const validateCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!elitePasscode.trim()) return;
+    await validateCodeFromUrl(elitePasscode.trim().toUpperCase());
+  };
+
+  const validateCodeFromUrl = async (code: string) => {
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -68,13 +85,13 @@ const PreloaderLanding: React.FC = () => {
       const res = await fetch(`${API_BASE}/api/auth/validate-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: elitePasscode.trim().toUpperCase() })
+        body: JSON.stringify({ code: code })
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.error || (language === 'en' ? 'Invalid code.' : 'Code ungültig.'));
       } else {
-        window.location.href = `/event?elitePasscode=${elitePasscode.trim().toUpperCase()}`;
+        window.location.href = `/event?elitePasscode=${code}`;
       }
     } catch (err) {
       setError(language === 'en' ? 'Network error. Please try again.' : 'Netzwerkfehler. Bitte erneut versuchen.');
