@@ -117,19 +117,51 @@ const PreloaderLanding: React.FC = () => {
         </div>
 
         {mode === 'code' ? (
-          <form onSubmit={validateCode} className="space-y-4">
-            <input
-              type="text"
-              value={elitePasscode}
-              onChange={(e) => setElitePasscode(e.target.value.toUpperCase())}
-              placeholder={language === 'en' ? 'Elite Passcode' : 'Elite Passcode'}
-              className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center"
-            />
-            <button disabled={loading || !elitePasscode}
-              className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
-              {loading ? (language === 'en' ? 'Checking…' : 'Prüfe…') : (language === 'en' ? 'Enter' : 'Eintreten')}
-            </button>
-          </form>
+          <div className="mt-6">
+            {/* 3-column section like original preloader */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+              {/* left copy */}
+              <div className="text-gray-300 text-sm leading-relaxed order-2 md:order-1">
+                {language === 'en' ? (
+                  <>
+                    <p>Kinkly is no ordinary night. It is a ritual. A secret feast of the senses, inspired by Gatsby, carried by elegance, created for those who demand more. Only every three months. Only for those who hold the key.</p>
+                    <p className="mt-4">An evening that ignites the senses, connects souls, and creates unforgettable moments – exclusively for those who live the extraordinary.</p>
+                  </>
+                ) : (
+                  <>
+                    <p>Kinkly ist keine gewöhnliche Nacht. Es ist ein Ritual – ein geheimes Fest der Sinne, getragen von Eleganz, geschaffen für jene, die mehr verlangen. Nur alle drei Monate. Nur für diejenigen, die den Schlüssel besitzen.</p>
+                    <p className="mt-4">Ein Abend, der die Sinne entfacht, Seelen verbindet und unvergessliche Momente schafft – exklusiv für Menschen, die das Außergewöhnliche leben.</p>
+                  </>
+                )}
+              </div>
+              {/* center medusa */}
+              <div className="flex justify-center order-1 md:order-2">
+                <MedusaLoader />
+              </div>
+              {/* right form */}
+              <div className="order-3">
+                <h2 className="font-serif-display text-3xl md:text-4xl text-white mb-4">{language==='en' ? 'THE KEY, PLEASE.' : 'DER SCHLÜSSEL, BITTE.'}</h2>
+                <form onSubmit={validateCode} className="space-y-3">
+                  <input
+                    type="text"
+                    value={elitePasscode}
+                    onChange={(e) => setElitePasscode(e.target.value.toUpperCase())}
+                    placeholder={language === 'en' ? 'Enter your Elite Passcode' : 'Elite Passcode eingeben'}
+                    className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white"
+                  />
+                  <button disabled={loading || !elitePasscode}
+                    className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
+                    {loading ? (language === 'en' ? 'Checking…' : 'Prüfe…') : (language === 'en' ? 'ENTER' : 'EINTRETEN')}
+                  </button>
+                </form>
+                <div className="mt-3 text-center">
+                  <button type="button" onClick={() => setMode('waitlist')} className="text-gray-400 hover:text-gray-200 underline text-sm">
+                    {language==='en' ? 'No passcode? Join the waitlist' : 'Kein Passcode? Warteliste beitreten'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           <form onSubmit={submitWaitlist} className="space-y-4">
             <input
