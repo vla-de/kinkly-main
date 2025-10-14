@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" fill="#000000">
+  <rect width="512" height="512" fill="#000"/>
+  <!-- Stylized K (monochrome, suitable for pinned tab) -->
+  <g fill="#ffffff">
+    <path d="M150 100h48v312h-48z"/>
+    <path d="M214 256l132-156h62L282 256l126 156h-62z"/>
+  </g>
+</svg>
+
+
