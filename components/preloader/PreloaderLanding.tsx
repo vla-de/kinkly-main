@@ -180,7 +180,7 @@ const PreloaderLanding: React.FC = () => {
       <div className="fixed top-4 left-4 z-50">
         <button
           onClick={toggleLanguage}
-          className="group inline-flex items-center gap-1 text-[#404040] text-sm bg-white/5 backdrop-blur px-3 py-1.5 rounded-full border border-[#404040]/20 hover:bg-[#404040]/10 transition"
+          className="group inline-flex items-center gap-1 text-[#404040] text-sm sm:text-base bg-white/5 backdrop-blur px-3 py-2 sm:px-4 sm:py-2 rounded-full border border-[#404040]/20 hover:bg-[#404040]/10 transition-all"
           aria-label="Toggle language"
         >
           <span className="group-hover:hidden">{language.toUpperCase()}</span>
@@ -201,10 +201,10 @@ const PreloaderLanding: React.FC = () => {
                   <MedusaLoader />
                 </div>
 
-                <div className="w-full max-w-6xl px-4">
+                <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8">
                   <div className={`flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-16 items-center lg:items-start transition-all duration-2000 ease-out ${phase === 'formVisible' ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}>
                     {/* Left text */}
-                    <div className="max-w-xl mx-auto lg:mx-0 text-center lg:text-left text-white/80 space-y-4 text-lg leading-relaxed">
+                    <div className="max-w-xl mx-auto lg:mx-0 text-center lg:text-left text-white/80 space-y-4 text-base sm:text-lg leading-relaxed px-4 sm:px-0">
                       {language === 'en' ? (
                         <>
                           <p>Kinkly is no ordinary night. It is a ritual. A secret feast of the senses, inspired by Gatsby, carried by elegance, created for those who demand more. Only every three months. Only for those who hold the key.</p>
@@ -219,13 +219,13 @@ const PreloaderLanding: React.FC = () => {
                     </div>
 
                     {/* Right column: elegant form */}
-                    <div className="w-full max-w-md mx-auto lg:mx-0">
+                    <div className="w-full max-w-md mx-auto lg:mx-0 px-4 sm:px-0">
                       {mode === 'code' ? (
                         <div>
-                          <h2 className="font-serif-display text-3xl md:text-4xl text-white mb-4">{language==='en' ? 'THE INVITATION AWAITS.' : ''}</h2>
-                          <form onSubmit={validateCode} className="space-y-3">
-                            <input type="text" value={elitePasscode} onChange={(e) => setElitePasscode(e.target.value.toUpperCase())} placeholder={language === 'en' ? 'Enter your Elite Passcode' : 'Elite Passcode eingeben'} className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center" />
-                            <button disabled={loading || !elitePasscode} className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">{loading ? (language === 'en' ? 'Checking…' : 'Prüfe…') : (language === 'en' ? 'ENTER' : 'EINTRETEN')}</button>
+                          <h2 className="font-serif-display text-2xl sm:text-3xl md:text-4xl text-white mb-6 text-center lg:text-left">{language==='en' ? 'THE INVITATION AWAITS.' : ''}</h2>
+                          <form onSubmit={validateCode} className="space-y-4">
+                            <input type="text" value={elitePasscode} onChange={(e) => setElitePasscode(e.target.value.toUpperCase())} placeholder={language === 'en' ? 'Enter your Elite Passcode' : 'Elite Passcode eingeben'} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-4 text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 transition-all" />
+                            <button disabled={loading || !elitePasscode} className="w-full bg-white text-black py-4 font-semibold rounded-lg disabled:opacity-60 hover:bg-gray-100 transition-all text-lg">{loading ? (language === 'en' ? 'Checking…' : 'Prüfe…') : (language === 'en' ? 'ENTER' : 'EINTRETEN')}</button>
                           </form>
                           <div className="mt-3 text-center">
                             <button type="button" onClick={() => setMode('waitlist')} className="text-gray-400 hover:text-gray-200 underline text-sm">
@@ -235,10 +235,10 @@ const PreloaderLanding: React.FC = () => {
                         </div>
                       ) : (
                         <div>
-                          <h2 className="font-serif-display text-3xl md:text-4xl text-white mb-4">{language==='en' ? 'JOIN THE CIRCLE.' : ''}</h2>
+                          <h2 className="font-serif-display text-2xl sm:text-3xl md:text-4xl text-white mb-6 text-center lg:text-left">{language==='en' ? 'JOIN THE CIRCLE.' : ''}</h2>
                           <form onSubmit={submitWaitlist} className="space-y-4">
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={language === 'en' ? 'Email for waitlist' : 'E‑Mail für Warteliste'} className="w-full bg-gray-900 border border-gray-700 rounded px-4 py-3 text-white text-center" />
-                            <button disabled={loading || !email} className="w-full bg-white text-black py-3 font-semibold rounded disabled:opacity-60">
+                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={language === 'en' ? 'Email for waitlist' : 'E‑Mail für Warteliste'} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-4 text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 transition-all" />
+                            <button disabled={loading || !email} className="w-full bg-white text-black py-4 font-semibold rounded-lg disabled:opacity-60 hover:bg-gray-100 transition-all text-lg">
                               {loading ? (language === 'en' ? 'Sending…' : 'Sende…') : 
                                (emailExists === true ? 
                                 (language === 'en' ? 'Send Magic Link' : 'Magic Link senden') : 
