@@ -5,25 +5,29 @@ const ScrollIndicator: React.FC = () => {
     <>
       <style>{`
         @keyframes scroll-arrow {
-          0%, 100% {
+          0% {
             transform: translateY(0);
-            opacity: 0;
-          }
-          30% {
-             transform: translateY(18px);
-            opacity: 0.3;
-          }         
-          50% {
-            transform: translateY(28px);
             opacity: 0.6;
           }
+          25% {
+            transform: translateY(12px);
+            opacity: 0.8;
+          }
+          50% {
+            transform: translateY(24px);
+            opacity: 0.4;
+          }
           75% {
-             transform: translateY(38px);
-            opacity: 0.3;
-          }  
+            transform: translateY(36px);
+            opacity: 0.2;
+          }
+          100% {
+            transform: translateY(48px);
+            opacity: 0;
+          }
         }
         .animate-scroll-arrow {
-          animation: scroll-arrow 2s ease-in-out infinite;
+          animation: scroll-arrow 2.5s ease-out infinite;
         }
       `}</style>
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-10">
