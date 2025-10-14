@@ -62,8 +62,11 @@ const PreloaderLanding: React.FC = () => {
   };
 
   return (
-    <section className="min-h-screen bg-black text-gray-300 flex items-center">
-      <div className="container mx-auto px-6 max-w-xl w-full">
+    <section className="min-h-screen bg-black text-gray-300 flex items-center relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none opacity-20 animate-pulse-slow">
+        <img src="/images/medusa.svg" alt="Medusa" className="w-[480px] h-[480px] mx-auto mt-16" />
+      </div>
+      <div className="container mx-auto px-6 max-w-xl w-full relative">
         <h1 className="font-serif-display text-4xl text-white text-center mb-8">Kinkly Berlin</h1>
 
         <div className="flex justify-center mb-8 space-x-4">

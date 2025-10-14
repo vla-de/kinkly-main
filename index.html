@@ -52,6 +52,18 @@
         filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.4));
         transform: scale(1.05);
       }
+      @keyframes k-glow {
+        0%, 100% { text-shadow: 0 0 0 rgba(255,255,255,0); filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
+        50% { text-shadow: 0 0 18px rgba(255,255,255,0.25); filter: drop-shadow(0 0 18px rgba(255,255,255,0.15)); }
+      }
+      @keyframes k-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-2px); }
+      }
+      .k-logo-animate {
+        animation: k-glow 3s ease-in-out infinite, k-float 6s ease-in-out infinite;
+        transition: transform 200ms ease, color 200ms ease;
+      }
       .fade-in {
         animation: fadeIn 1s ease-in-out;
       }

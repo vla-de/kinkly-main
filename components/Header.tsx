@@ -24,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
         </button>
       </header>
       <header className="absolute top-0 right-0 p-6 md:p-8 z-50">
-        <button onClick={onLoginClick} className="btn-glow font-logo text-4xl md:text-5xl text-gray-400 hover:text-white" title={t.header_login_tooltip}>
+        <button onClick={onLoginClick} className="btn-glow font-logo text-4xl md:text-5xl text-gray-400 hover:text-white k-logo-animate" title={t.header_login_tooltip}>
           K
         </button>
       </header>
