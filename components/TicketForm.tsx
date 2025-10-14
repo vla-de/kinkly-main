@@ -16,6 +16,7 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
     email: ''
   });
   const [referralCodeId, setReferralCodeId] = useState<number | null>(null);
+  const [elitePasscode, setElitePasscode] = useState<string>('');
   const API_BASE_URL = 'https://kinkly-backend.onrender.com';
 
   // Load form data from localStorage on component mount
@@ -43,6 +44,8 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
     if (savedReferralCodeId) {
       setReferralCodeId(parseInt(savedReferralCodeId));
     }
+    const codeParam = new URLSearchParams(window.location.search).get('elitePasscode');
+    if (codeParam) setElitePasscode(codeParam.toUpperCase());
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -93,6 +96,11 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
       <p className="text-center text-gray-400 mb-6 text-sm">
         {t.ticket_paragraph}
       </p>
+      {!elitePasscode && (
+        <div className="mb-4 p-3 rounded bg-gray-900 border border-gray-700 text-sm text-gray-300">
+          Um eine Anfrage zu stellen oder zu kaufen, füge deinen Elite Passcode hinzu.
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-gray-400">Vorname</label>

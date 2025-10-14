@@ -548,6 +548,18 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, env: process.env.NODE_ENV || 'development' });
 });
 
+// Current user info from cookie
+app.get('/api/auth/me', authenticateUser, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT id, email, role FROM users WHERE id = $1`, [req.user.uid]);
+    if (r.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json({ user: r.rows[0] });
+  } catch (e) {
+    console.error('auth/me error:', e);
+    res.status(500).json({ error: 'Failed to load user' });
+  }
+});
+
 // --- Auth: Magic link flow ---
 app.post('/api/auth/request-magic-link', async (req, res) => {
   const { email, redirectUrl } = req.body || {};
@@ -1301,9 +1313,9 @@ app.post('/api/waitlist', async (req, res) => {
   
   const { firstName, lastName, email, referralCode } = req.body;
   
-  if (!firstName || !lastName || !email) {
-    console.log('Validation failed:', { firstName, lastName, email });
-    return res.status(400).json({ error: 'First name, last name, and email are required' });
+  if (!email) {
+    console.log('Validation failed (email required):', { email });
+    return res.status(400).json({ error: 'Email is required' });
   }
   
   if (!pool) {
@@ -1316,13 +1328,13 @@ app.post('/api/waitlist', async (req, res) => {
     
     const result = await pool.query(`
       INSERT INTO waitlist (first_name, last_name, email, referral_code) 
-      VALUES ($1, $2, $3, $4)
+      VALUES (COALESCE($1, ''), COALESCE($2, ''), $3, $4)
       ON CONFLICT (email) DO UPDATE SET
-        first_name = EXCLUDED.first_name,
-        last_name = EXCLUDED.last_name,
-        referral_code = EXCLUDED.referral_code
+        first_name = COALESCE(EXCLUDED.first_name, waitlist.first_name),
+        last_name = COALESCE(EXCLUDED.last_name, waitlist.last_name),
+        referral_code = COALESCE(EXCLUDED.referral_code, waitlist.referral_code)
       RETURNING *
-    `, [firstName, lastName, email, referralCode || null]);
+    `, [firstName || null, lastName || null, email, referralCode || null]);
     
     console.log('Waitlist entry created/updated:', result.rows[0]);
     
