@@ -5,11 +5,23 @@
       "destination": "https://kinkly-backend.onrender.com/api/$1"
     },
     {
+      "source": "/event",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/event/(.*)",
+      "destination": "/index.html"
+    },
+    {
       "source": "/admin",
       "destination": "/index.html"
     },
     {
       "source": "/admin/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
