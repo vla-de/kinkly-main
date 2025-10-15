@@ -1645,15 +1645,25 @@ app.get('/api/events/status', async (req, res) => {
 // Update remaining tickets when payment is successful
 const updateRemainingTickets = async (tier) => {
   try {
-    let column = 'invitation_tickets'; // default
-    if (tier === 'The Circle') column = 'circle_tickets';
-    else if (tier === 'The Inner Sanctum') column = 'sanctum_tickets';
+    let column = 'invitation_tickets'; // default for 'The Invitation'
+    
+    if (tier === 'The Circle') {
+      column = 'circle_tickets';
+    } else if (tier === 'The Inner Sanctum') {
+      column = 'sanctum_tickets';
+    } else if (tier === 'The Invitation') {
+      column = 'invitation_tickets';
+    }
+    
+    console.log(`Updating tickets for tier: "${tier}" -> column: ${column}`);
     
     await pool.query(`
       UPDATE event_settings 
       SET ${column} = GREATEST(${column} - 1, 0), updated_at = NOW()
       WHERE id = 1
     `);
+    
+    console.log(`Successfully reduced ${column} by 1`);
   } catch (error) {
     console.error('Error updating remaining tickets:', error);
   }
