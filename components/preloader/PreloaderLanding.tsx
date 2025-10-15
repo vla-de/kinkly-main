@@ -98,6 +98,10 @@ const PreloaderLanding: React.FC = () => {
         const data = await res.json().catch(() => ({}));
         setError(data.error || (language === 'en' ? 'Invalid code.' : 'Code ungültig.'));
       } else {
+        // Store the validated code in sessionStorage for persistence
+        sessionStorage.setItem('elitePasscode', code);
+        localStorage.setItem('elitePasscode', code);
+        
         // Show email/name capture modal before redirect
         setShowEmailCapture(true);
         setValidatedCode(code);
@@ -255,6 +259,9 @@ const PreloaderLanding: React.FC = () => {
   };
 
   const skipEmailCapture = () => {
+    // Ensure code is stored before redirect
+    sessionStorage.setItem('elitePasscode', validatedCode);
+    localStorage.setItem('elitePasscode', validatedCode);
     window.location.href = `/event?elitePasscode=${validatedCode}`;
   };
 
@@ -372,52 +379,56 @@ const PreloaderLanding: React.FC = () => {
           {/* Email Capture Modal */}
           {showEmailCapture && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-              <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-md">
-                <h3 className="text-xl font-serif-display text-white mb-4 text-center">
+              <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 sm:p-6 w-full max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto">
+                <h3 className="text-lg sm:text-xl font-serif-display text-white mb-3 sm:mb-4 text-center">
                   {language === 'en' ? 'Almost there...' : 'Fast geschafft...'}
                 </h3>
-                <p className="text-gray-400 text-sm mb-6 text-center">
+                <p className="text-gray-400 text-xs sm:text-sm mb-4 sm:mb-6 text-center">
                   {language === 'en' 
                     ? 'Share your details to receive updates about the event.' 
                     : 'Teile deine Daten mit uns, um Updates zum Event zu erhalten.'}
                 </p>
                 
-                <form onSubmit={handleEmailCaptureSubmit} className="space-y-4">
-                  <input
-                    type="text"
-                    placeholder={language === 'en' ? 'First Name' : 'Vorname'}
-                    value={captureData.firstName}
-                    onChange={(e) => setCaptureData(prev => ({ ...prev, firstName: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                  />
-                  <input
-                    type="text"
-                    placeholder={language === 'en' ? 'Last Name' : 'Nachname'}
-                    value={captureData.lastName}
-                    onChange={(e) => setCaptureData(prev => ({ ...prev, lastName: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                  />
+                <form onSubmit={handleEmailCaptureSubmit} className="space-y-3 sm:space-y-4">
+                  {/* Name fields in one row on larger screens */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      placeholder={language === 'en' ? 'First Name' : 'Vorname'}
+                      value={captureData.firstName}
+                      onChange={(e) => setCaptureData(prev => ({ ...prev, firstName: e.target.value }))}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                    />
+                    <input
+                      type="text"
+                      placeholder={language === 'en' ? 'Last Name' : 'Nachname'}
+                      value={captureData.lastName}
+                      onChange={(e) => setCaptureData(prev => ({ ...prev, lastName: e.target.value }))}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                    />
+                  </div>
+                  
                   <input
                     type="email"
                     placeholder={language === 'en' ? 'Email' : 'E-Mail'}
                     value={captureData.email}
                     onChange={(e) => setCaptureData(prev => ({ ...prev, email: e.target.value }))}
                     required
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
                   />
                   
-                  <div className="flex space-x-3">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <button
                       type="button"
                       onClick={skipEmailCapture}
-                      className="flex-1 bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600 transition-all"
+                      className="flex-1 bg-gray-700 text-white py-2.5 rounded-lg hover:bg-gray-600 transition-all text-sm font-medium"
                     >
                       {language === 'en' ? 'Skip' : 'Überspringen'}
                     </button>
                     <button
                       type="submit"
                       disabled={loading || !captureData.email}
-                      className="flex-1 bg-white text-black py-3 rounded-lg disabled:opacity-60 hover:bg-gray-100 transition-all font-semibold"
+                      className="flex-1 bg-white text-black py-2.5 rounded-lg disabled:opacity-60 hover:bg-gray-100 transition-all font-semibold text-sm"
                     >
                       {loading ? (language === 'en' ? 'Saving...' : 'Speichere...') : (language === 'en' ? 'Continue' : 'Weiter')}
                     </button>

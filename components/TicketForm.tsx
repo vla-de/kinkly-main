@@ -19,8 +19,9 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
   const [elitePasscode, setElitePasscode] = useState<string>('');
   const API_BASE_URL = 'https://kinkly-backend.onrender.com';
 
-  // Load form data from localStorage on component mount
+  // Load form data and elite passcode on component mount
   useEffect(() => {
+    // Load form data from localStorage
     const savedData = localStorage.getItem('kinklyFormData');
     console.log('Loading form data from localStorage:', savedData);
     if (savedData) {
@@ -39,13 +40,45 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
       }
     }
     
+    // Load elite passcode from multiple sources (priority order)
+    let passcode = '';
+    
+    // 1. Check URL parameter first
+    const codeParam = new URLSearchParams(window.location.search).get('elitePasscode');
+    if (codeParam) {
+      passcode = codeParam.toUpperCase();
+      console.log('Elite passcode from URL:', passcode);
+    }
+    
+    // 2. Check sessionStorage
+    if (!passcode) {
+      const sessionCode = sessionStorage.getItem('elitePasscode');
+      if (sessionCode) {
+        passcode = sessionCode.toUpperCase();
+        console.log('Elite passcode from sessionStorage:', passcode);
+      }
+    }
+    
+    // 3. Check localStorage (fallback)
+    if (!passcode) {
+      const localCode = localStorage.getItem('elitePasscode');
+      if (localCode) {
+        passcode = localCode.toUpperCase();
+        console.log('Elite passcode from localStorage:', passcode);
+      }
+    }
+    
+    if (passcode) {
+      setElitePasscode(passcode);
+      // Store in sessionStorage for persistence
+      sessionStorage.setItem('elitePasscode', passcode);
+    }
+    
     // Load referral code ID from sessionStorage
     const savedReferralCodeId = sessionStorage.getItem('referralCodeId');
     if (savedReferralCodeId) {
       setReferralCodeId(parseInt(savedReferralCodeId));
     }
-    const codeParam = new URLSearchParams(window.location.search).get('elitePasscode');
-    if (codeParam) setElitePasscode(codeParam.toUpperCase());
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -88,51 +121,57 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
   };
 
   return (
-    <div>
-      <h2 className="font-serif-display text-3xl text-white text-center mb-2">
-        Eine Einladung anfragen
-        {selectedTier && <span className="block text-xl text-gray-400 mt-1 font-normal">{selectedTier.title}</span>}
-      </h2>
-      <p className="text-center text-gray-400 mb-6 text-sm">
-        Bitte beachten Sie: Das Absenden Ihrer Anfrage und Zahlung ist eine Bewerbung. Es garantiert keinen Eintritt. Die endgültige Bestätigung wird nur vom Zirkel erteilt. Nicht erfolgreiche Bewerbungen werden vollständig zurückerstattet.
-      </p>
+    <div className="space-y-4">
+      <div className="text-center">
+        <h2 className="font-serif-display text-2xl sm:text-3xl text-white mb-1">
+          Eine Einladung anfragen
+        </h2>
+        {selectedTier && (
+          <span className="block text-lg text-gray-400 font-normal">{selectedTier.title}</span>
+        )}
+      </div>
       
-      {/* Elite Passcode Display */}
-      <div className="mb-6 p-4 rounded bg-gray-900 border border-gray-700">
+      {/* Elite Passcode Display - kompakter */}
+      <div className="p-3 rounded bg-gray-800 border border-gray-600">
         <div className="text-center">
-          <div className="text-sm text-gray-400 mb-2">Ihr Elite Passcode</div>
-          <div className="text-2xl font-mono font-bold text-white tracking-wider">
+          <div className="text-xs text-gray-400 mb-1">Ihr Elite Passcode</div>
+          <div className="text-lg font-mono font-bold text-white tracking-wider">
             {elitePasscode || 'NICHT VERFÜGBAR'}
           </div>
         </div>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label htmlFor="firstName" className="block text-sm font-medium text-gray-400">Vorname</label>
-          <input
-            type="text"
-            id="firstName"
-            name="firstName"
-            value={formData.firstName}
-            onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-            required
-            className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
-          />
+      
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Name fields in one row on larger screens */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="firstName" className="block text-xs font-medium text-gray-400 mb-1">Vorname</label>
+            <input
+              type="text"
+              id="firstName"
+              name="firstName"
+              value={formData.firstName}
+              onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+              required
+              className="w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+            />
+          </div>
+          <div>
+            <label htmlFor="lastName" className="block text-xs font-medium text-gray-400 mb-1">Nachname</label>
+            <input
+              type="text"
+              id="lastName"
+              name="lastName"
+              value={formData.lastName}
+              onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+              required
+              className="w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+            />
+          </div>
         </div>
+        
         <div>
-          <label htmlFor="lastName" className="block text-sm font-medium text-gray-400">Nachname</label>
-          <input
-            type="text"
-            id="lastName"
-            name="lastName"
-            value={formData.lastName}
-            onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-            required
-            className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
-          />
-        </div>
-        <div>
-          <label htmlFor="request-email" className="block text-sm font-medium text-gray-400">{t.ticket_email_label}</label>
+          <label htmlFor="request-email" className="block text-xs font-medium text-gray-400 mb-1">{t.ticket_email_label}</label>
           <input
             type="email"
             id="request-email"
@@ -140,31 +179,39 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
             value={formData.email}
             onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
             required
-            className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+            className="w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
           />
         </div>
+        
         <div>
-          <label htmlFor="message" className="block text-sm font-medium text-gray-400">
-            Extra Wünsche, Vorlieben oder besondere Anmerkungen (Optional)
+          <label htmlFor="message" className="block text-xs font-medium text-gray-400 mb-1">
+            Extra Wünsche (Optional)
           </label>
           <textarea
             id="message"
             name="message"
-            rows={3}
-            placeholder="Teilen Sie uns mit, was Sie sich für den Abend wünschen..."
-            className="mt-1 block w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+            rows={2}
+            placeholder="Was wünschen Sie sich für den Abend?"
+            className="w-full bg-gray-800 border border-gray-700 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500 resize-none"
           ></textarea>
         </div>
-         {error && <p className="text-red-500 text-xs text-center">{error}</p>}
+        
+        {error && <p className="text-red-500 text-xs text-center">{error}</p>}
+        
         <div>
           <button 
             type="submit" 
             disabled={isSubmitting || !elitePasscode}
-            className="w-full bg-white text-black py-3 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider disabled:bg-gray-400"
+            className="w-full bg-white text-black py-2.5 px-4 hover:bg-gray-200 transition-colors duration-300 font-semibold tracking-wider disabled:bg-gray-400 text-sm"
           >
             {isSubmitting ? t.ticket_button_submitting : t.ticket_button}
           </button>
         </div>
+        
+        {/* Disclaimer - kleiner und weniger prominent */}
+        <p className="text-xs text-gray-500 text-center leading-relaxed">
+          Das Absenden ist eine Bewerbung. Die endgültige Bestätigung wird nur vom Zirkel erteilt.
+        </p>
       </form>
     </div>
   );
