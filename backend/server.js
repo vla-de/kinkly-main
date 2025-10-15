@@ -1425,18 +1425,36 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     
     console.log('Sold tickets:', soldTickets.rows[0]);
     
-    const scarcity = await pool.query(`
+    let scarcity = await pool.query(`
       SELECT invitation_tickets, circle_tickets, sanctum_tickets FROM event_settings WHERE id = 1
     `);
     
     console.log('Scarcity settings:', scarcity.rows[0]);
     
+    // If no event_settings found, create default values
+    if (scarcity.rows.length === 0) {
+      console.log('No event_settings found, creating default values...');
+      await pool.query(`
+        INSERT INTO event_settings (id, invitation_tickets, circle_tickets, sanctum_tickets)
+        VALUES (1, 20, 15, 10)
+        ON CONFLICT (id) DO NOTHING
+      `);
+      
+      // Fetch again after creation
+      scarcity = await pool.query(`
+        SELECT invitation_tickets, circle_tickets, sanctum_tickets FROM event_settings WHERE id = 1
+      `);
+      console.log('New scarcity settings:', scarcity.rows[0]);
+    }
+    
+    const scarcityData = scarcity.rows[0] || { invitation_tickets: 20, circle_tickets: 15, sanctum_tickets: 10 };
+    
     const result = {
       ...stats.rows[0],
       // Available tickets (total - sold)
-      invitation_tickets: (scarcity.rows[0]?.invitation_tickets || 20) - (soldTickets.rows[0]?.invitation_sold || 0),
-      circle_tickets: (scarcity.rows[0]?.circle_tickets || 15) - (soldTickets.rows[0]?.circle_sold || 0),
-      sanctum_tickets: (scarcity.rows[0]?.sanctum_tickets || 10) - (soldTickets.rows[0]?.sanctum_sold || 0),
+      invitation_tickets: scarcityData.invitation_tickets - (soldTickets.rows[0]?.invitation_sold || 0),
+      circle_tickets: scarcityData.circle_tickets - (soldTickets.rows[0]?.circle_sold || 0),
+      sanctum_tickets: scarcityData.sanctum_tickets - (soldTickets.rows[0]?.sanctum_sold || 0),
       // Sold tickets for admin display
       invitation_sold: soldTickets.rows[0]?.invitation_sold || 0,
       circle_sold: soldTickets.rows[0]?.circle_sold || 0,
