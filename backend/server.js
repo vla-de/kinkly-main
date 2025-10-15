@@ -948,17 +948,34 @@ app.get('/db/health', async (req, res) => {
 
 // Create a new application
 app.post('/api/applications', async (req, res) => {
-  const { firstName, lastName, email, message, tier, referralCodeId } = req.body;
+  const { firstName, lastName, email, message, tier, referralCodeId, elitePasscode } = req.body;
   if (!firstName || !lastName || !email || !tier) {
     return res.status(400).json({ error: 'First name, last name, email, and tier are required.' });
   }
+  
   try {
     if (!pool) {
       throw new Error('Database is not configured. Set DATABASE_URL in environment.');
     }
+    
+    // If elitePasscode is provided, find the corresponding referral_code_id
+    let finalReferralCodeId = referralCodeId;
+    if (elitePasscode && !referralCodeId) {
+      const codeResult = await pool.query(
+        'SELECT id FROM referral_codes WHERE code = $1 AND is_active = true',
+        [elitePasscode.toUpperCase()]
+      );
+      if (codeResult.rows.length > 0) {
+        finalReferralCodeId = codeResult.rows[0].id;
+        console.log('Found referral code ID for elite passcode:', elitePasscode, '->', finalReferralCodeId);
+      } else {
+        console.log('Elite passcode not found or inactive:', elitePasscode);
+      }
+    }
+    
     const result = await pool.query(
       'INSERT INTO applications (first_name, last_name, email, message, tier, referral_code_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-      [firstName, lastName, email, message || null, tier, referralCodeId || null]
+      [firstName, lastName, email, message || null, tier, finalReferralCodeId || null]
     );
     res.status(201).json({ applicationId: result.rows[0].id });
   } catch (error) {

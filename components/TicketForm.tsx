@@ -72,6 +72,12 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
       setElitePasscode(passcode);
       // Store in sessionStorage for persistence
       sessionStorage.setItem('elitePasscode', passcode);
+      console.log('Elite passcode set in state:', passcode);
+    } else {
+      console.log('No elite passcode found from any source');
+      console.log('URL params:', window.location.search);
+      console.log('SessionStorage:', sessionStorage.getItem('elitePasscode'));
+      console.log('LocalStorage:', localStorage.getItem('elitePasscode'));
     }
     
     // Load referral code ID from sessionStorage
@@ -92,7 +98,8 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
       email: formData.email,
       message: (e.currentTarget.querySelector('textarea[name="message"]') as HTMLTextAreaElement)?.value || '',
       tier: selectedTier?.title || 'The Invitation', // Default to a valid tier
-      referralCodeId: referralCodeId
+      referralCodeId: referralCodeId,
+      elitePasscode: elitePasscode // Include elite passcode in submission
     };
     
     console.log('Submitting data:', data); // Debug log
@@ -210,7 +217,7 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
         
         {/* Disclaimer - kleiner und weniger prominent */}
         <p className="text-xs text-gray-500 text-center leading-relaxed">
-          Das Absenden ist eine Bewerbung. Die endgültige Bestätigung wird nur vom Zirkel erteilt.
+          Bitte beachten Sie: Das Absenden Ihrer Anfrage und Zahlung ist eine Bewerbung. Es garantiert keinen Eintritt. Die endgültige Bestätigung wird nur vom Zirkel erteilt. Nicht erfolgreiche Bewerbungen werden vollständig zurückerstattet.
         </p>
       </form>
     </div>
