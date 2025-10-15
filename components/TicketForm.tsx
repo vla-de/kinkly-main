@@ -17,6 +17,8 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
   });
   const [referralCodeId, setReferralCodeId] = useState<number | null>(null);
   const [elitePasscode, setElitePasscode] = useState<string>('');
+  const [codeInput, setCodeInput] = useState<string>('');
+  const [showCodeInput, setShowCodeInput] = useState<boolean>(false);
   const API_BASE_URL = 'https://kinkly-backend.onrender.com';
 
   // Load form data and elite passcode on component mount
@@ -78,6 +80,8 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
       console.log('URL params:', window.location.search);
       console.log('SessionStorage:', sessionStorage.getItem('elitePasscode'));
       console.log('LocalStorage:', localStorage.getItem('elitePasscode'));
+      // Show code input if no passcode is found
+      setShowCodeInput(true);
     }
     
     // Load referral code ID from sessionStorage
@@ -86,6 +90,38 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
       setReferralCodeId(parseInt(savedReferralCodeId));
     }
   }, []);
+
+  const validateCode = async (code: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/validate-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code.toUpperCase() })
+      });
+      
+      if (response.ok) {
+        setElitePasscode(code.toUpperCase());
+        sessionStorage.setItem('elitePasscode', code.toUpperCase());
+        localStorage.setItem('elitePasscode', code.toUpperCase());
+        setShowCodeInput(false);
+        setCodeInput('');
+        return true;
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setError(data.error || 'Ungültiger Code');
+        return false;
+      }
+    } catch (err) {
+      setError('Netzwerkfehler. Bitte erneut versuchen.');
+      return false;
+    }
+  };
+
+  const handleCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!codeInput.trim()) return;
+    await validateCode(codeInput.trim());
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -138,15 +174,45 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
         )}
       </div>
       
-      {/* Elite Passcode Display - kompakter */}
-      <div className="p-3 rounded bg-gray-800 border border-gray-600">
-        <div className="text-center">
-          <div className="text-xs text-gray-400 mb-1">Ihr Elite Passcode</div>
-          <div className="text-lg font-mono font-bold text-white tracking-wider">
-            {elitePasscode || 'NICHT VERFÜGBAR'}
+      {/* Elite Passcode Display oder Eingabe */}
+      {showCodeInput ? (
+        <div className="p-3 rounded bg-gray-800 border border-gray-600">
+          <div className="text-center mb-3">
+            <div className="text-xs text-gray-400 mb-2">Elite Passcode eingeben</div>
+            <form onSubmit={handleCodeSubmit} className="flex gap-2">
+              <input
+                type="text"
+                value={codeInput}
+                onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                placeholder="CODE123"
+                className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-gray-500 focus:border-gray-500"
+              />
+              <button
+                type="submit"
+                disabled={!codeInput.trim()}
+                className="bg-white text-black px-4 py-2 rounded text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prüfen
+              </button>
+            </form>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="p-3 rounded bg-gray-800 border border-gray-600">
+          <div className="text-center">
+            <div className="text-xs text-gray-400 mb-1">Ihr Elite Passcode</div>
+            <div className="text-lg font-mono font-bold text-white tracking-wider">
+              {elitePasscode || 'NICHT VERFÜGBAR'}
+            </div>
+            <button
+              onClick={() => setShowCodeInput(true)}
+              className="text-xs text-gray-400 hover:text-gray-300 underline mt-1"
+            >
+              Code ändern
+            </button>
+          </div>
+        </div>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name fields in one row on larger screens */}
