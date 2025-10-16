@@ -200,3 +200,47 @@ A comprehensive, JWT-protected admin area with full CRUD operations.
 - **Payment Processing:** Stripe + PayPal (Production)
 
 **All systems operational and ready for production use.** 🚀
+
+---
+
+## 9. Future Enhancements & TODOs
+
+### 9.1. E-Mail-Strategie & Automation
+- **E-Mail-Architektur implementieren:**
+  - `circle@kingly.eu` → Circle-Mitglieder Bestätigungen
+  - `events@kingly.eu` → Event-Updates für alle Interessenten  
+  - `kontakt@k-production.eu` → Business-Kommunikation nach außen
+  - `noreply@send.kingly.eu` → System-E-Mails (Magic Links, etc.)
+- **Resend-Konfiguration** für alle E-Mail-Templates anpassen
+- **E-Mail-Automation** für Circle-Journey (Waitlist → Circle → Events)
+- **Business-E-Mail-Templates** für externe Partner-Kommunikation
+
+### 9.2. DSGVO-Compliance
+- [ ] Cookie-Consent Banner (`react-cookie-consent`)
+- [ ] Datenschutz-Seite aktualisieren
+- [ ] AGB-Seite erstellen
+- [ ] Impressum vervollständigen
+
+### 9.3. Erweiterte Admin-Features
+- [ ] E-Mail-Kampagnen-System
+- [ ] Erweiterte Analytics und Berichte
+- [ ] Bulk-Operations für Benutzer
+- [ ] Audit-Log für Admin-Aktionen
+
+### 9.4. Benutzer-Experience
+- [ ] Erweiterte Animationen und Übergänge
+- [ ] Mobile-Optimierung verfeinern
+- [ ] Loading-States verbessern
+- [ ] Error-Handling optimieren
+
+### 9.5. Technische Verbesserungen
+- [ ] Performance-Optimierung
+- [ ] Code-Refactoring
+- [ ] Unit-Tests hinzufügen
+- [ ] Monitoring und Logging
+
+### 9.6. Erweiterte Features
+- [ ] Multi-Event-Support
+- [ ] Erweiterte Zahlungsoptionen
+- [ ] Social-Media-Integration
+- [ ] Push-Notifications
