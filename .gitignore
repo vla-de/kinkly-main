@@ -28,3 +28,7 @@ dist-ssr
 .npmrc
 package-lock.json
 tsconfig.tsbuildinfo
+
+KUNDENBRIEFING_GUIDE.md
+
+/RESTAURANT_SAAS_CONCEPT
