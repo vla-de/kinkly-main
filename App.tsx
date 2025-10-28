@@ -117,7 +117,6 @@ const App: React.FC = () => {
   if (path === '/') {
     return (
       <div className="bg-black min-h-screen text-gray-300 font-sans antialiased relative">
-        <Header onLoginClick={handleOpenLogin} />
         <main>
           <PreloaderLanding />
         </main>

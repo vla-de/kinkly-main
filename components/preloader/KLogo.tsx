@@ -41,10 +41,13 @@ const KLogo: React.FC<KLogoProps> = ({ phase, onTransitionEnd }) => {
     ? 'scale-[0.12] sm:scale-[0.14] md:scale-[0.15] translate-x-[calc(50vw-4rem)] -translate-y-[calc(50vh-4rem)] sm:translate-x-[calc(50vw-5rem)] sm:-translate-y-[calc(50vh-5rem)]'
     : 'scale-100';
 
+  // Higher z-index during animation phases to stay above content
+  const zIndexClass = phase === 'initial' || phase === 'docking' ? 'z-40' : 'z-20';
+
   return (
     <div
       onTransitionEnd={onTransitionEnd}
-      className={`fixed inset-0 flex items-center justify-center transition-transform duration-[1200ms] ease-[cubic-bezier(0.83,0,0.17,1)] z-20 pointer-events-none ${transformClasses}`}
+      className={`fixed inset-0 flex items-center justify-center transition-transform duration-[1200ms] ease-[cubic-bezier(0.83,0,0.17,1)] ${zIndexClass} pointer-events-none ${transformClasses}`}
     >
       <style>{`
         @keyframes draw-k { 0% { stroke-dashoffset: 2000; } 100% { stroke-dashoffset: 0; } }
