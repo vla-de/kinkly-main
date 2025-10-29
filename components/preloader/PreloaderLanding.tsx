@@ -279,8 +279,19 @@ const PreloaderLanding: React.FC = () => {
         // Redirect to event page
         window.location.href = `/event?elitePasscode=${validatedCode}`;
       } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || (language === 'en' ? 'Failed to save data.' : 'Daten konnten nicht gespeichert werden.'));
+        let serverMsg = '';
+        try {
+          const data = await res.json();
+          serverMsg = data.error || '';
+        } catch {
+          try {
+            serverMsg = await res.text();
+          } catch {}
+        }
+        setError(
+          (serverMsg && `${language === 'en' ? 'Server:' : 'Server:'} ${serverMsg}`) ||
+          (language === 'en' ? 'Failed to save data.' : 'Daten konnten nicht gespeichert werden.')
+        );
       }
     } catch (err) {
       setError(language === 'en' ? 'Network error. Please try again.' : 'Netzwerkfehler. Bitte erneut versuchen.');

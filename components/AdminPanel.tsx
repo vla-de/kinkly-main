@@ -213,7 +213,7 @@ const AdminPanel: React.FC = () => {
         setError(errorData.error || 'Failed to delete user');
       }
     } catch (error) {
-      setError('Network error');
+      setError('Network error while assigning code');
     }
   };
 
@@ -315,7 +315,12 @@ const AdminPanel: React.FC = () => {
         setInviteMessage('');
         setSelectedPerson(null);
       } else {
-        alert('Failed to send invite');
+        try {
+          const err = await response.json();
+          alert(`Failed to send invite: ${err.error || response.statusText}`);
+        } catch {
+          alert('Failed to send invite');
+        }
       }
     } catch (err) {
       console.error('Error sending invite:', err);
