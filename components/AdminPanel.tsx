@@ -50,6 +50,7 @@ const AdminPanel: React.FC = () => {
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string>('admin'); // Get from auth
+  const [showOnlyUnassignedCodes, setShowOnlyUnassignedCodes] = useState<boolean>(true);
 
   // Fetch data based on active tab
   useEffect(() => {
@@ -536,8 +537,24 @@ const AdminPanel: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-serif-display text-2xl text-white">Waitlist</h2>
-                <div className="text-sm text-gray-400">
-                  {waitlist.length} people on waitlist
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={showOnlyUnassignedCodes}
+                      onChange={(e) => setShowOnlyUnassignedCodes(e.target.checked)}
+                    />
+                    <span>Nur freie Codes anzeigen</span>
+                  </label>
+                  <button
+                    onClick={fetchData}
+                    className="btn-exclusive bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 text-sm"
+                  >
+                    Aktualisieren
+                  </button>
+                  <div className="text-sm text-gray-400">
+                    {waitlist.length} people on waitlist
+                  </div>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -585,7 +602,9 @@ const AdminPanel: React.FC = () => {
                                 defaultValue=""
                               >
                                 <option value="">Assign Code</option>
-                                {referralCodes.filter(rc => rc.is_active && !rc.user_id).map(rc => (
+                                {referralCodes
+                                  .filter(rc => rc.is_active && (showOnlyUnassignedCodes ? !rc.user_id : true))
+                                  .map(rc => (
                                   <option key={rc.id} value={rc.id}>{rc.code}</option>
                                 ))}
                               </select>
