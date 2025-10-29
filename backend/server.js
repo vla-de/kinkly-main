@@ -824,34 +824,6 @@ app.post('/api/user/add-passcode', authenticateUser, async (req, res) => {
     res.status(500).json({ error: 'Failed to assign code' });
   }
 });
-  const { code } = req.body || {};
-  if (!code) return res.status(400).json({ error: 'Code is required' });
-  try {
-    // Validate code is usable
-    const rc = await pool.query(`
-      SELECT id FROM referral_codes
-      WHERE code = $1 AND is_active = true AND (expires_at IS NULL OR expires_at > NOW())
-    `, [code.trim().toUpperCase()]);
-    if (rc.rows.length === 0) return res.status(400).json({ error: 'Invalid or inactive code' });
-
-    // Link to waitlist entry for this user's email (if exists)
-    // Find user email
-    const u = await pool.query(`SELECT email FROM users WHERE id = $1`, [req.user.uid]);
-    const userEmail = u.rows[0]?.email;
-    if (!userEmail) return res.status(404).json({ error: 'User not found' });
-
-    await pool.query(`
-      INSERT INTO waitlist (first_name, last_name, email, referral_code)
-      VALUES ('', '', $1, $2)
-      ON CONFLICT (email) DO UPDATE SET referral_code = EXCLUDED.referral_code
-    `, [userEmail, code.trim().toUpperCase()]);
-
-    res.json({ success: true });
-  } catch (e) {
-    console.error('add-passcode error:', e);
-    res.status(500).json({ error: 'Failed to add passcode' });
-  }
-});
 
 // --- Referrer stats for logged-in user ---
 app.get('/api/user/referrer-stats', authenticateUser, async (req, res) => {
