@@ -116,7 +116,7 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const createReferralCode = async (userId: number, maxUses: number, expiresAt?: string) => {
+  const createReferralCode = async (userId: number | null, maxUses: number, expiresAt?: string) => {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await fetch('/api/admin/referral-codes', {
@@ -125,7 +125,7 @@ const AdminPanel: React.FC = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json' 
         },
-        body: JSON.stringify({ userId, maxUses, expiresAt })
+        body: JSON.stringify({ userId: userId ?? null, maxUses, expiresAt })
       });
       if (response.ok) {
         fetchData(); // Refresh data
@@ -452,17 +452,19 @@ const AdminPanel: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-serif-display text-2xl text-white">Elite Passcodes</h2>
-                <button 
-                  onClick={() => {
-                    const userId = prompt('Enter User ID to generate code for:');
-                    if (userId) {
-                      createReferralCode(parseInt(userId), 10);
-                    }
-                  }}
-                  className="btn-exclusive bg-white text-black px-4 py-2 text-sm"
-                >
-                  Generate Code
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      const userId = prompt('Enter User ID to generate code for (leave empty for free code):');
+                      if (userId === null) return;
+                      const parsed = userId.trim() === '' ? null : parseInt(userId, 10);
+                      createReferralCode(Number.isNaN(parsed as any) ? null : parsed, 10);
+                    }}
+                    className="btn-exclusive bg-white text-black px-4 py-2 text-sm"
+                  >
+                    Generate Code
+                  </button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

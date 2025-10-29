@@ -1403,9 +1403,9 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     const stats = await pool.query(`
       SELECT 
         COUNT(*) as total_applications,
-        COUNT(CASE WHEN status = 'pending_payment' THEN 1 END) as pending_payments,
-        COUNT(CASE WHEN status = 'pending_review' THEN 1 END) as pending_review,
-        COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved,
+        COUNT(CASE WHEN a.status = 'pending_payment' THEN 1 END) as pending_payments,
+        COUNT(CASE WHEN a.status = 'pending_review' THEN 1 END) as pending_review,
+        COUNT(CASE WHEN a.status = 'approved' THEN 1 END) as approved,
         COALESCE(SUM(p.amount), 0) as total_revenue
       FROM applications a
       LEFT JOIN payments p ON a.id = p.application_id
@@ -1416,11 +1416,11 @@ app.get('/api/admin/stats', authenticateAdmin, async (req, res) => {
     // Get sold tickets by tier
     const soldTickets = await pool.query(`
       SELECT 
-        COUNT(CASE WHEN tier = 'The Invitation' THEN 1 END) as invitation_sold,
-        COUNT(CASE WHEN tier = 'The Circle' THEN 1 END) as circle_sold,
-        COUNT(CASE WHEN tier = 'The Inner Sanctum' THEN 1 END) as sanctum_sold
-      FROM applications 
-      WHERE status IN ('pending_review', 'approved')
+        COUNT(CASE WHEN a.tier = 'The Invitation' THEN 1 END) as invitation_sold,
+        COUNT(CASE WHEN a.tier = 'The Circle' THEN 1 END) as circle_sold,
+        COUNT(CASE WHEN a.tier = 'The Inner Sanctum' THEN 1 END) as sanctum_sold
+      FROM applications a
+      WHERE a.status IN ('pending_review', 'approved')
     `);
     
     console.log('Sold tickets:', soldTickets.rows[0]);
