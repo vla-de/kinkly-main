@@ -27,6 +27,10 @@ const PreloaderLanding: React.FC = () => {
     lastName: '',
     email: ''
   });
+  const [captureConsent, setCaptureConsent] = useState<boolean>(false);
+  const [waitlistFirstName, setWaitlistFirstName] = useState('');
+  const [waitlistLastName, setWaitlistLastName] = useState('');
+  const [waitlistConsent, setWaitlistConsent] = useState<boolean>(false);
 
   const SCROLL_TRIGGER_DISTANCE = 50;
 
@@ -115,7 +119,10 @@ const PreloaderLanding: React.FC = () => {
 
   const submitWaitlist = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !waitlistFirstName.trim() || !waitlistLastName.trim() || !waitlistConsent) {
+      setError(language === 'en' ? 'Please complete all required fields.' : 'Bitte alle Pflichtfelder ausfüllen.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -130,11 +137,19 @@ const PreloaderLanding: React.FC = () => {
       const res = await fetch(`${API_BASE}/api/waitlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() })
+        body: JSON.stringify({
+          email: email.trim(),
+          firstName: waitlistFirstName.trim(),
+          lastName: waitlistLastName.trim(),
+          consent: true
+        })
       });
       if (res.ok) {
         setMessage(language === 'en' ? 'Welcome to the circle – we will be in touch.' : 'Willkommen im Kreis – wir melden uns.');
         setEmail('');
+        setWaitlistFirstName('');
+        setWaitlistLastName('');
+        setWaitlistConsent(false);
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error || (language === 'en' ? 'An error occurred.' : 'Ein Fehler ist aufgetreten.'));
@@ -220,7 +235,10 @@ const PreloaderLanding: React.FC = () => {
 
   const handleEmailCaptureSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!captureData.email.trim()) return;
+    if (!captureData.email.trim() || !captureData.firstName.trim() || !captureData.lastName.trim() || !captureConsent) {
+      setError(language === 'en' ? 'Please complete all required fields.' : 'Bitte alle Pflichtfelder ausfüllen.');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -233,7 +251,8 @@ const PreloaderLanding: React.FC = () => {
           lastName: captureData.lastName,
           email: captureData.email,
           referralCode: validatedCode,
-          source: 'preloader'
+          source: 'preloader',
+          consent: true
         })
       });
       
@@ -244,6 +263,17 @@ const PreloaderLanding: React.FC = () => {
           lastName: captureData.lastName,
           email: captureData.email
         }));
+        // Mark that verification is pending (soft gate on event)
+        localStorage.setItem('kinklyVerificationPending', '1');
+
+        // Trigger verification email
+        try {
+          await fetch('/api/auth/request-email-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: captureData.email, redirectUrl: window.location.origin + '/event' })
+          });
+        } catch {}
         
         // Redirect to event page
         window.location.href = `/event?elitePasscode=${validatedCode}`;
@@ -258,12 +288,6 @@ const PreloaderLanding: React.FC = () => {
     }
   };
 
-  const skipEmailCapture = () => {
-    // Ensure code is stored before redirect
-    sessionStorage.setItem('elitePasscode', validatedCode);
-    localStorage.setItem('elitePasscode', validatedCode);
-    window.location.href = `/event?elitePasscode=${validatedCode}`;
-  };
 
   return (
     <main className="bg-black min-h-screen text-gray-300 relative overflow-x-hidden">
@@ -328,7 +352,19 @@ const PreloaderLanding: React.FC = () => {
                         <div>
                           <h2 className="font-serif-display text-2xl sm:text-3xl md:text-4xl text-white mb-6 text-center lg:text-left">{language==='en' ? 'JOIN THE CIRCLE.' : ''}</h2>
                           <form onSubmit={submitWaitlist} className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <input type="text" value={waitlistFirstName} onChange={(e) => setWaitlistFirstName(e.target.value)} placeholder={language === 'en' ? 'First Name' : 'Vorname'} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-4 text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 transition-all" />
+                              <input type="text" value={waitlistLastName} onChange={(e) => setWaitlistLastName(e.target.value)} placeholder={language === 'en' ? 'Last Name' : 'Nachname'} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-4 text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 transition-all" />
+                            </div>
                             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={language === 'en' ? 'Email for waitlist' : 'E‑Mail für Warteliste'} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-4 text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 transition-all" />
+                            <label className="flex items-start gap-2 text-xs text-gray-400 leading-snug">
+                              <input type="checkbox" checked={waitlistConsent} onChange={(e) => setWaitlistConsent(e.target.checked)} className="mt-1" />
+                              <span>
+                                {language === 'en' ? 'I agree to data processing and accept the ' : 'Ich willige in die Datenverarbeitung ein und akzeptiere die '}
+                                <button type="button" onClick={handleDatenschutzClick} className="underline hover:text-gray-300">{language === 'en' ? 'privacy policy' : 'Datenschutzerklärung'}</button>
+                                .
+                              </span>
+                            </label>
                             <button disabled={loading || !email} className="w-full bg-white text-black py-4 font-semibold rounded-lg disabled:opacity-60 hover:bg-gray-100 transition-all text-lg">
                               {loading ? (language === 'en' ? 'Sending…' : 'Sende…') : 
                                (emailExists === true ? 
@@ -376,7 +412,7 @@ const PreloaderLanding: React.FC = () => {
             </div>
           </div>
           
-          {/* Email Capture Modal */}
+          {/* Email Capture Modal (no Skip; all fields + consent required) */}
           {showEmailCapture && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
               <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 sm:p-6 w-full max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -416,15 +452,16 @@ const PreloaderLanding: React.FC = () => {
                     required
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
                   />
+                  <label className="flex items-start gap-2 text-xs text-gray-400 leading-snug">
+                    <input type="checkbox" checked={captureConsent} onChange={(e) => setCaptureConsent(e.target.checked)} className="mt-0.5" />
+                    <span>
+                      {language === 'en' ? 'I agree to data processing and accept the ' : 'Ich willige in die Datenverarbeitung ein und akzeptiere die '}
+                      <button type="button" onClick={handleDatenschutzClick} className="underline hover:text-gray-300">{language === 'en' ? 'privacy policy' : 'Datenschutzerklärung'}</button>
+                      .
+                    </span>
+                  </label>
                   
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                    <button
-                      type="button"
-                      onClick={skipEmailCapture}
-                      className="flex-1 bg-gray-700 text-white py-2.5 rounded-lg hover:bg-gray-600 transition-all text-sm font-medium"
-                    >
-                      {language === 'en' ? 'Skip' : 'Überspringen'}
-                    </button>
                     <button
                       type="submit"
                       disabled={loading || !captureData.email}
