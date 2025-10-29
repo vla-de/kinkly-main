@@ -1,160 +1,114 @@
-## Kinkly – User Flows (Concise Sketch)
+## Kinkly – Unified User Flow (Single Mermaid Block)
 
-Purpose: Quick, structured overview you can import/recreate in a diagramming tool.
-
-### Legend
-- Start/End: rounded
-- Decision: diamond
-- Data store: cylinder
-- Important params: `elitePasscode`, `email`, `verified`
-
----
-
-### 1) Pre‑Landing – With Elite Passcode
-Steps:
-1. User lands on `/` (pre‑landing)
-2. Enters `elitePasscode`
-3. Validate via `/api/auth/validate-code`
-4. Show capture modal (required: first name, last name, email, consent)
-5. Create prospect via `/api/prospects`
-6. Trigger verification mail via `/api/auth/request-email-verification`
-7. Store `kinklyVerificationPending=1` and `kinklyFormData`
-8. Redirect to `/event?elitePasscode=...`
-
-Mermaid (paste into tools that support Mermaid):
-```mermaid
-flowchart TD
-  A([Landing /]) --> B[Enter elitePasscode]
-  B --> C{Validate code}
-  C -- invalid --> E[Show error]
-  C -- valid --> F[Capture: first, last, email, consent]
-  F --> G[POST /api/prospects]
-  G --> H[POST /api/auth/request-email-verification]
-  H --> I[localStorage: pending + formData]
-  I --> J([Redirect /event?elitePasscode=...])
-```
-
----
-
-### 2) Pre‑Landing – No Code (Waitlist)
-Steps:
-1. From `/` switch to Waitlist
-2. Required: first name, last name, email, consent
-3. Save via `/api/waitlist`
-4. Optional: later invite or magic‑link login
+Paste this as‑is into Mermaid Live, Miro, FigJam, draw.io or any Mermaid‑capable tool.
 
 ```mermaid
 flowchart TD
-  A([Landing /]) --> B[Switch to Waitlist]
-  B --> C[Enter first, last, email, consent]
-  C --> D[POST /api/waitlist]
-  D --> E([Done / Thank you])
+  %% Global notes
+  %% Important params: elitePasscode, email, verified; localStorage keys: kinklyVerificationPending, kinklyFormData
+
+  %% Entry
+  LND([User lands on / (Pre‑Landing)])
+
+  %% Pre‑Landing with Code
+  LND --> PLC[Enter elitePasscode]
+  PLC --> VAL{POST /api/auth/validate-code}
+  VAL -- invalid --> PLC_ERR[Show error]
+  VAL -- valid --> CAP[Capture first, last, email, consent]
+  CAP --> PROS[POST /api/prospects]
+  PROS --> VERQ[POST /api/auth/request-email-verification]
+  VERQ --> LSP[Set localStorage: pending + formData]
+  LSP --> RED1([Redirect to /event?elitePasscode=...])
+
+  %% Pre‑Landing without Code (Waitlist)
+  LND --> WL[Switch to Waitlist]
+  WL --> WLF[Enter first, last, email, consent]
+  WLF --> WLS[POST /api/waitlist]
+  WLS --> WL_OK([Done / Thank you])
+
+  %% Event soft gate
+  EVT([/event])
+  RED1 --> EVT
+  LND -. direct nav .-> EVT
+  EVT --> PND{localStorage pending?}
+  PND -- yes --> BAN[Show verification banner]
+  PND -- no --> NOBAN[No banner]
+
+  %% Banner actions
+  BAN --> RESEND[POST /api/auth/request-email-verification]
+  BAN --> LOGIN[Open Login (Magic Link)]
+  BAN --> CLOSE[Dismiss]
+
+  %% Magic link login
+  LOGIN --> ML_REQ[POST /api/auth/request-magic-link]
+  ML_REQ --> ML_MAIL[[Email: Magic link]]
+  ML_MAIL --> ML_CLICK[GET /api/auth/magic-login?token=...]
+  ML_CLICK --> EVT
+
+  %% Email verification
+  VER[[Email: Verification link]]
+  VERQ --> VER
+  VER --> VCLICK[GET /api/auth/verify-email?token=...]
+  VCLICK --> EVT
+
+  %% Ticketing
+  NOBAN --> TIER[Select tier]
+  BAN --> TIER
+  TIER --> FORM[Referral Code / TicketForm]
+  FORM --> APP[POST /api/applications]
+  APP --> PAY{Payment: Stripe | PayPal}
+  PAY -- success --> REC[Record payment + decrement stock]
+  REC --> CONF[[Email: Confirmation]]
+  CONF --> DONE([Done])
+  PAY -- fail --> RETRY[Show error / retry]
+
+  %% Admin (overview)
+  ADM([/admin])
+  ADM --> DASH[Dashboard: Users, Codes, Scarcity, Waitlist]
+  DASH --> ACT1[Assign code to waitlist]
+  DASH --> ACT2[Send invite]
+  DASH --> ACT3[Adjust scarcity]
 ```
-
----
-
-### 3) Email Verification Flow (Double Opt‑In)
-Steps:
-1. Backend creates token in `email_verifications`
-2. Email contains link to `/api/auth/verify-email?token=...&redirect=...`
-3. On click: token validated → mark verified → redirect to `/event`
-
-```mermaid
-sequenceDiagram
-  participant UI as Frontend
-  participant BE as Backend
-  participant Mail as Email Provider
-  UI->>BE: POST /api/auth/request-email-verification (email)
-  BE->>Mail: Send verification link
-  Mail-->>User: Verification email
-  User->>BE: GET /api/auth/verify-email?token=...
-  BE-->>UI: 302 Redirect /event (verified)
-```
-
----
-
-### 4) Event Page – Soft Gate
-Behavior:
-- If `kinklyVerificationPending=1`: show banner with email, actions: Resend, Login, Close.
-- Browsing allowed; actions like Ticket/Profil weiter via Login/Magic‑Link.
-
-```mermaid
-flowchart TD
-  A([/event]) --> B{localStorage pending?}
-  B -- yes --> C[Show verification banner]
-  B -- no --> D[No banner]
-  C --> E[Resend verification]
-  C --> F[Login (Magic Link)]
-  C --> G[Dismiss]
-```
-
----
-
-### 5) Login via Magic Link
-Steps:
-1. Request link: `POST /api/auth/request-magic-link` (email, redirect)
-2. Click link: `GET /api/auth/magic-login?token=...` → sets session cookie → redirect `/event`
-
-```mermaid
-sequenceDiagram
-  participant UI as Frontend
-  participant BE as Backend
-  participant Mail as Email Provider
-  UI->>BE: POST /api/auth/request-magic-link
-  BE->>Mail: Send magic link
-  Mail-->>User: Magic link email
-  User->>BE: GET /api/auth/magic-login?token=...
-  BE-->>UI: 302 Redirect /event (session set)
-```
-
----
-
-### 6) Referral Code/Ticket Flow (Event‑Seite)
-Steps:
-1. User klickt „Request Ticket“ / wählt Tier
-2. Referral Code Modal (falls nötig) → TicketForm
-3. Submit Application `/api/applications` (resolves `elitePasscode` → `referral_code_id`)
-4. Payment: Stripe/PayPal
-5. On success: `payments` insert, `applications.status=pending_review`, decrement tier stock
-6. Confirmation mail
-
-```mermaid
-flowchart TD
-  A([Event]) --> B[Select tier]
-  B --> C[Referral Code / TicketForm]
-  C --> D[POST /api/applications]
-  D --> E{Payment Stripe/PayPal}
-  E -->|success| F[Record payment + decrement stock]
-  F --> G[Send confirmation mail]
-  G --> H([Done])
-  E -->|fail| I[Show error / retry]
-```
-
----
-
-### 7) Resend Verification (New Device or Missed Mail)
-Options:
-- Banner „Mail erneut senden“ → `POST /api/auth/request-email-verification`
-- Kein Banner sichtbar: Login‑Button im Header oder kleiner Link „Verifizierungs‑Mail erneut senden“ (empfohlen)
-
----
-
-### 8) Admin (Kurz)
-- Login (separat)
-- Dashboard: Users, Referral Codes, Scarcity, Waitlist
-- Actions: Assign code to waitlist, send invite, adjust scarcity
 
 ---
 
 ## Tool‑Vorschläge (Online)
-- Miro (Flowchart, Swimlanes, Mermaid Widget optional)
-- Whimsical (schnelle User Flows/Wireflows)
-- FigJam (Figma) – Teamfreundlich, Sticky‑notes + Shapes
-- diagrams.net (draw.io) – kostenlos, Export nach SVG/PNG
-- Mermaid Live Editor – für die Code‑Snippets oben (`https://mermaid.live`)
+- Miro (Flowchart, Swimlanes)
+- Whimsical (User Flows)
+- FigJam (Figma)
+- diagrams.net (draw.io)
+- Mermaid Live Editor: `https://mermaid.live`
 
-Tipps:
-- Nutze Swimlanes: Frontend / Backend / Email
-- Nutze eindeutige Statusnamen: `pending_verification`, `pending_review`, `approved`
+---
+
+## Einfache Version für Kund:innen (ohne Technik‑Begriffe)
+
+1) Startseite (Einladung)
+- Wenn jemand einen Einladungscode hat, gibt er ihn ein und nennt kurz seinen Namen und seine E‑Mail.
+- Danach bekommt die Person eine Bestätigungs‑E‑Mail, um die E‑Mail‑Adresse zu bestätigen.
+- Anschließend landet sie auf der Event‑Seite.
+
+2) Startseite (ohne Einladungscode)
+- Wer keinen Code hat, trägt sich mit Namen und E‑Mail auf die Warteliste ein.
+- Wir melden uns, sobald eine Einladung frei wird.
+
+3) E‑Mail‑Bestätigung
+- In der E‑Mail ist ein Link zum Bestätigen. Ein Klick reicht.
+- Nach der Bestätigung geht es automatisch weiter zur Event‑Seite.
+
+4) Event‑Seite
+- Die Seite zeigt Informationen zum Abend und die verfügbaren Plätze.
+- Wer bereits bestätigt ist, kann sich anmelden und fortfahren.
+- Wer noch nicht bestätigt ist, sieht einen kurzen Hinweis und kann die Bestätigungs‑Mail erneut anfordern.
+
+5) Ticket anfragen / Teilnahme sichern
+- Es wird die gewünschte Kategorie ausgewählt.
+- Kurz die Kontaktdaten prüfen und Anfrage absenden.
+- Danach kann direkt bezahlt werden (wie im Online‑Shop).
+- Sobald die Zahlung geklappt hat, gibt es eine Bestätigung per E‑Mail und der Platz ist gesichert.
+
+6) Für Einladungen und Empfehlungen
+- Wer bereits Teil des Kreises ist, kann Einladungen verschicken.
+- So kommen neue Gäste über persönliche Empfehlungen dazu.
 
 

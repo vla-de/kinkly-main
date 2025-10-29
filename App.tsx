@@ -31,6 +31,7 @@ const App: React.FC = () => {
   const [verificationPending, setVerificationPending] = useState<boolean>(false);
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   const handleOpenLogin = () => setActiveModal('login');
   const handleCloseModal = () => setActiveModal(null);
@@ -103,6 +104,16 @@ const App: React.FC = () => {
       setVerificationPending(!!pending);
       setPendingEmail(savedEmail || null);
     } catch {}
+
+    // Check auth session via cookie on backend domain
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        setIsAuthenticated(res.ok);
+      } catch {
+        setIsAuthenticated(false);
+      }
+    })();
 
     // Listen for custom events from cookie consent
     const handleOpenModal = (event: CustomEvent) => {

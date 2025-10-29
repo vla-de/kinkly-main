@@ -5,7 +5,8 @@ import MedusaLoader from './MedusaLoader';
 import ScrollIndicator from './ScrollIndicator';
 import Footer from '../Footer';
 
-const API_BASE = 'https://kinkly-backend.onrender.com';
+// Use same-origin API to avoid cross-site cookie/CORS issues; Vercel rewrites /api/* to backend
+const API_BASE = '';
 
 type AnimationPhase = 'initial' | 'docking' | 'loading' | 'formVisible';
 
