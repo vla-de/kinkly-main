@@ -243,8 +243,8 @@ const PreloaderLanding: React.FC = () => {
     
     setLoading(true);
     try {
-      // Create prospect entry
-      const res = await fetch(`${API_BASE}/api/prospects`, {
+      // Create or upsert waitlist entry with referral code
+      const res = await fetch(`${API_BASE}/api/waitlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -252,8 +252,7 @@ const PreloaderLanding: React.FC = () => {
           lastName: captureData.lastName,
           email: captureData.email,
           referralCode: validatedCode,
-          source: 'preloader',
-          consent: true
+          formRenderedAt: Date.now()
         })
       });
       

@@ -77,6 +77,15 @@ const App: React.FC = () => {
     // Check for magic link error parameters
     const checkMagicLinkError = () => {
       const urlParams = new URLSearchParams(window.location.search);
+      // Clear verification pending if verified
+      if (urlParams.get('verified') === '1') {
+        localStorage.removeItem('kinklyVerificationPending');
+        localStorage.removeItem('kinklyFormData');
+        setVerificationPending(false);
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('verified');
+        window.history.replaceState({}, '', newUrl.toString());
+      }
       const error = urlParams.get('error');
       if (error) {
         const errorMessages: { [key: string]: string } = {

@@ -1104,7 +1104,11 @@ app.get('/api/auth/verify-email', async (req, res) => {
     } catch (e) {
       console.error('post-verify welcome email error:', e);
     }
-    res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app');
+    // Append verified=1 to help frontend clear soft-gate state
+    const target = (redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app';
+    const url = new URL(target);
+    url.searchParams.set('verified', '1');
+    res.redirect(url.toString());
   } catch (e) {
     console.error('verify-email error:', e);
     res.status(500).send('Verification failed');
