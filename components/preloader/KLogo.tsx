@@ -1,4 +1,5 @@
 import React from 'react';
+import { getAudioContext, playBassBeat } from '../../utils/audio';
 
 export type AnimationPhase = 'initial' | 'docking' | 'loading' | 'formVisible';
 
@@ -10,30 +11,13 @@ interface KLogoProps {
 const KLogo: React.FC<KLogoProps> = ({ phase, onTransitionEnd }) => {
   const isDocked = phase === 'docking' || phase === 'loading' || phase === 'formVisible';
   
-  // Bass sound for heartbeat
+  // Bass sound for heartbeat (plays only after audio is unlocked by user gesture)
   React.useEffect(() => {
     if (!isDocked) return;
     
-    const playBass = () => {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(60, audioContext.currentTime); // Deep bass
-      oscillator.type = 'sine';
-      
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.1);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-    };
-    
-    const interval = setInterval(playBass, 2000); // Every 2 seconds
+    const interval = setInterval(() => {
+      if (getAudioContext()) playBassBeat();
+    }, 2000);
     return () => clearInterval(interval);
   }, [isDocked]);
 

@@ -4,6 +4,7 @@ import KLogo from './KLogo';
 import MedusaLoader from './MedusaLoader';
 import ScrollIndicator from './ScrollIndicator';
 import Footer from '../Footer';
+import { unlockAudioOnce } from '../../utils/audio';
 
 // Use same-origin API to avoid cross-site cookie/CORS issues; Vercel rewrites /api/* to backend
 const API_BASE = '';
@@ -64,6 +65,19 @@ const PreloaderLanding: React.FC = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [phase, handleScroll]);
+
+  // Unlock WebAudio on first user gesture
+  useEffect(() => {
+    const unlock = () => unlockAudioOnce();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('touchstart', unlock, { once: true });
+    window.addEventListener('click', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock as any);
+      window.removeEventListener('touchstart', unlock as any);
+      window.removeEventListener('click', unlock as any);
+    };
+  }, []);
 
   useEffect(() => {
     const isLocked = phase === 'docking' || phase === 'loading' || phase === 'formVisible';
