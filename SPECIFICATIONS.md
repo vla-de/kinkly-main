@@ -288,6 +288,12 @@ Notes:
 - [ ] Unit-Tests hinzufügen
 - [x] Monitoring und Logging (Comprehensive backend logging, error tracking)
 
+### 9.7. Launch Checklist (Sicherheit)
+- [ ] Form‑Guards (Honeypot + Time‑Trap) wieder aktivieren
+- [ ] Turnstile/hCaptcha Server‑Verifikation aktivieren (ENV: TURNSTILE_SECRET)
+- [ ] Rate‑Limits prüfen/anpassen (auth/waitlist/applications/validate-code)
+- [ ] CORS nur auf produktive Domains beschränken (kinkly.eu, www.kinkly.eu)
+
 ### 9.6. Erweiterte Features ✅ PARTIALLY IMPLEMENTED
 - [x] Multi-Event-Support (Event settings table, scalable architecture)
 - [x] Erweiterte Zahlungsoptionen (Stripe + PayPal integration)

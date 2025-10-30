@@ -1379,6 +1379,52 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
   }
 });
 
+// Admin: list referred users for a given owner (applications who used owner's codes)
+app.get('/api/admin/users/:id/referrals', authenticateAdmin, async (req, res) => {
+  try {
+    const ownerId = parseInt(req.params.id, 10);
+    if (Number.isNaN(ownerId)) return res.status(400).json({ error: 'Invalid user id' });
+    // find codes owned by this application id
+    const codes = await pool.query(`SELECT id, code FROM referral_codes WHERE user_id = $1`, [ownerId]);
+    if (codes.rows.length === 0) return res.json({ codes: [], referrals: [] });
+    const codeIds = codes.rows.map(c => c.id);
+    const placeholders = codeIds.map((_, i) => `$${i + 1}`).join(',');
+    const referrals = await pool.query(
+      `SELECT a.id, a.first_name, a.last_name, a.email, a.tier, a.status, a.created_at, a.referral_code_id,
+              (SELECT code FROM referral_codes rc WHERE rc.id = a.referral_code_id) as code
+       FROM applications a
+       WHERE a.referral_code_id IN (${placeholders})
+       ORDER BY a.created_at DESC`,
+      codeIds
+    );
+    res.json({ codes: codes.rows, referrals: referrals.rows });
+  } catch (e) {
+    console.error('admin get referrals error:', e);
+    res.status(500).json({ error: 'Failed to fetch referrals' });
+  }
+});
+
+// Admin: usage for a specific referral code
+app.get('/api/admin/referral-codes/:id/usage', authenticateAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid code id' });
+    const apps = await pool.query(
+      `SELECT a.id, a.first_name, a.last_name, a.email, a.tier, a.status, a.created_at
+       FROM applications a WHERE a.referral_code_id = $1 ORDER BY a.created_at DESC`,
+      [id]
+    );
+    const usage = await pool.query(
+      `SELECT ip_address, user_agent, session_id, used_at FROM referral_code_usage WHERE referral_code_id = $1 ORDER BY used_at DESC LIMIT 100`,
+      [id]
+    );
+    res.json({ applications: apps.rows, usage: usage.rows });
+  } catch (e) {
+    console.error('admin code usage error:', e);
+    res.status(500).json({ error: 'Failed to fetch code usage' });
+  }
+});
+
 // Delete user (super admin only)
 app.delete('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   try {
@@ -1414,6 +1460,11 @@ app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
     const w = await pool.query('SELECT 1 FROM waitlist WHERE email = $1', [email]);
     if (w.rows.length > 0) {
       return res.status(409).json({ error: 'Email already exists in waitlist. Convert instead of creating duplicate.' });
+    }
+    // Block if email already exists as application
+    const aexists = await pool.query('SELECT 1 FROM applications WHERE email = $1', [email]);
+    if (aexists.rows.length > 0) {
+      return res.status(409).json({ error: 'Email already exists as user' });
     }
     const result = await pool.query(
       'INSERT INTO applications (first_name, last_name, email, message, tier, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
@@ -1456,6 +1507,11 @@ app.put('/api/admin/users/:id', authenticateAdmin, async (req, res) => {
   const { firstName, lastName, email, message, tier, status } = req.body;
   
   try {
+    // Prevent duplicate emails on update
+    const dup = await pool.query('SELECT 1 FROM applications WHERE email = $1 AND id <> $2', [email, id]);
+    if (dup.rows.length > 0) {
+      return res.status(409).json({ error: 'Email already in use by another user' });
+    }
     const result = await pool.query(
       'UPDATE applications SET first_name = $1, last_name = $2, email = $3, message = $4, tier = $5, status = $6 WHERE id = $7 RETURNING *',
       [firstName, lastName, email, message || null, tier, status || 'pending_review', id]

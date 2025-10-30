@@ -58,6 +58,10 @@ const AdminPanel: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string>('admin'); // Get from auth
   const [showOnlyUnassignedCodes, setShowOnlyUnassignedCodes] = useState<boolean>(true);
+  const [expandedUsers, setExpandedUsers] = useState<Record<number, boolean>>({});
+  const [userReferrals, setUserReferrals] = useState<Record<number, any[]>>({});
+  const [expandedCodes, setExpandedCodes] = useState<Record<number, boolean>>({});
+  const [codeUsages, setCodeUsages] = useState<Record<number, { applications: any[]; usage: any[] }>>({});
 
   // Fetch data based on active tab
   useEffect(() => {
@@ -158,6 +162,34 @@ const AdminPanel: React.FC = () => {
       }
     } catch (err) {
       console.error('Error updating scarcity:', err);
+    }
+  };
+
+  const toggleUserExpand = async (userId: number) => {
+    setExpandedUsers(prev => ({ ...prev, [userId]: !prev[userId] }));
+    if (!userReferrals[userId]) {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const res = await fetch(`/api/admin/users/${userId}/referrals`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          setUserReferrals(prev => ({ ...prev, [userId]: data.referrals || [] }));
+        }
+      } catch {}
+    }
+  };
+
+  const toggleCodeUsage = async (codeId: number) => {
+    setExpandedCodes(prev => ({ ...prev, [codeId]: !prev[codeId] }));
+    if (!codeUsages[codeId]) {
+      try {
+        const token = localStorage.getItem('adminToken');
+        const res = await fetch(`/api/admin/referral-codes/${codeId}/usage`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) {
+          const data = await res.json();
+          setCodeUsages(prev => ({ ...prev, [codeId]: data }));
+        }
+      } catch {}
     }
   };
 
@@ -467,7 +499,39 @@ const AdminPanel: React.FC = () => {
                             >
                               Create Code
                             </button>
+                            <button
+                              onClick={() => toggleUserExpand(user.id)}
+                              className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs"
+                            >
+                              {expandedUsers[user.id] ? 'Hide Referrals' : 'Show Referrals'}
+                            </button>
                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {users.map(user => expandedUsers[user.id] && (
+                      <tr key={`refs-${user.id}`} className="bg-gray-950">
+                        <td colSpan={7} className="py-3 px-4">
+                          {(userReferrals[user.id] && userReferrals[user.id].length > 0) ? (
+                            <div className="space-y-2">
+                              {userReferrals[user.id].map((ref: any) => (
+                                <div key={ref.id} className="flex items-center justify-between text-sm border border-gray-800 rounded px-3 py-2">
+                                  <div className="text-gray-300">
+                                    <span className="text-white font-medium mr-2">{ref.first_name} {ref.last_name}</span>
+                                    <span className="text-gray-400">{ref.email}</span>
+                                  </div>
+                                  <div className="text-gray-400">
+                                    <span className="mr-3">Code: <span className="text-white font-mono">{ref.code}</span></span>
+                                    <span className="mr-3">Tier: {ref.tier || '-'}</span>
+                                    <span className="mr-3">Status: {ref.status}</span>
+                                    <span>{new Date(ref.created_at).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 text-sm">Keine Referrals vorhanden.</div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -537,6 +601,12 @@ const AdminPanel: React.FC = () => {
                           >
                             Edit
                           </button>
+                          <button
+                            onClick={() => toggleCodeUsage(code.id)}
+                            className="btn-exclusive bg-blue-700 hover:bg-blue-600 px-3 py-1 text-xs mr-2"
+                          >
+                            {expandedCodes[code.id] ? 'Hide Usage' : 'Show Usage'}
+                          </button>
                           {code.is_active ? (
                             <button 
                               onClick={() => {
@@ -559,6 +629,43 @@ const AdminPanel: React.FC = () => {
                             >
                               Reactivate
                             </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {referralCodes.map(code => expandedCodes[code.id] && (
+                      <tr key={`code-usage-${code.id}`} className="bg-gray-950">
+                        <td colSpan={7} className="py-3 px-4">
+                          {codeUsages[code.id] ? (
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div>
+                                <h4 className="text-white font-medium mb-2">Applications</h4>
+                                <div className="space-y-2">
+                                  {codeUsages[code.id].applications.map((app: any) => (
+                                    <div key={app.id} className="text-sm text-gray-300 border border-gray-800 rounded px-3 py-2">
+                                      <span className="text-white font-medium mr-2">{app.first_name} {app.last_name}</span>
+                                      <span className="text-gray-400 mr-2">{app.email}</span>
+                                      <span className="mr-2">Tier: {app.tier || '-'}</span>
+                                      <span>Status: {app.status}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="text-white font-medium mb-2">Usage (last 100)</h4>
+                                <div className="space-y-2">
+                                  {codeUsages[code.id].usage.map((u: any, idx: number) => (
+                                    <div key={idx} className="text-xs text-gray-400 border border-gray-800 rounded px-3 py-2">
+                                      <span className="mr-2">{new Date(u.used_at).toLocaleString()}</span>
+                                      <span className="mr-2">IP: {u.ip_address || '-'}</span>
+                                      <span className="truncate">UA: {u.user_agent?.slice(0,80) || '-'}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 text-sm">Wird geladen…</div>
                           )}
                         </td>
                       </tr>
