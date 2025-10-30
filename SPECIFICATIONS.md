@@ -6,6 +6,8 @@ To create a luxurious, mystical user experience for an exclusive, high-end event
 
 **Status: LIVE-READY** ✅ - All core features implemented and deployed
 
+**Latest Update:** Database migrated to Supabase, Resend email configuration in progress
+
 ---
 
 ## 2. Core User Flow: The Golden Path (For Users with a Referral Code)
@@ -22,6 +24,14 @@ The user lands on a page that is intentionally sparse and mysterious. The only i
 - **Input:** Elite Passcode field (formerly Referral Code)
 - **Button:** "EINTRETEN" (German) / "ENTER" (English)
 - **Fallback:** "Kein Token? Warteliste beitreten" / "No token? Join the waitlist"
+
+**Enhanced Pre-Landing Flow:**
+- **Two-Step Process:** Code validation → Email/Name capture modal
+- **Required Fields:** First name, last name, email (all mandatory)
+- **Consent Checkbox:** Privacy policy agreement required
+- **Double Opt-In:** Email verification sent after form submission
+- **Soft Gate:** Verification banner on event page for unverified users
+- **Language Persistence:** Selected language (EN/DE) saved in localStorage
 
 - **Action:** User enters their Elite Passcode and clicks "EINTRETEN".
 - **Backend:** `POST /api/auth/validate-code`. The backend validates the code, checking its validity, usage count, expiration, and IP/session-based limits.
@@ -95,16 +105,22 @@ A comprehensive, JWT-protected admin area with full CRUD operations.
 - **Admins can:**
     - **Create Users:** Add new users with optional tier assignment or waitlist placement
     - **Edit Users:** Update user details, status, and tier assignments
+    - **Delete Users:** Super admin can delete users (DELETE /api/admin/users/:id)
     - **View Users:** Separate first/last name display, status tracking
     - **Create Elite Passcodes:** Generate codes with format `[WORD][THREE_DIGITS]` (e.g., `LATEX777`)
+    - **Free Codes:** Create codes without initial user assignment for later distribution
     - **Configure Tokens:** Set max uses, expiration dates, referrer assignment
     - **Token Management:** Edit, deactivate, and track usage counts
     - **Referrer Display:** Show referrer names instead of IDs
+    - **Code Assignment:** Assign free codes to waitlist members
 
 ### 4.2. Waitlist Management ✅ IMPLEMENTED
 - **Admins can:**
     - **View Waitlist:** See all waitlist entries with timestamps
     - **Send Invitations:** Email event invitations to waitlist members
+    - **Assign Codes:** Assign free referral codes to waitlist members
+    - **Filter Codes:** Toggle between all codes and free codes only
+    - **Refresh Data:** Manual refresh of waitlist and code data
     - **Cross-Reference:** Check if emails exist in applications or waitlist
 
 ### 4.3. Event & Scarcity Management ✅ IMPLEMENTED
@@ -127,8 +143,8 @@ A comprehensive, JWT-protected admin area with full CRUD operations.
 
 - **Frontend:** React, TypeScript, Vite, Context API
 - **Backend:** Node.js, Express.js, PostgreSQL
-- **Database:** **PostgreSQL hosted on Render** (Production-ready)
-- **Deployment:** Vercel (Frontend), Render (Backend & DB)
+- **Database:** **PostgreSQL hosted on Supabase** (Production-ready, migrated from Render)
+- **Deployment:** Vercel (Frontend), Render (Backend), Supabase (Database)
 - **Payments:** Stripe Checkout + PayPal integration
 - **Transactional Emails:** **Resend** (Production-ready)
 - **Authentication:** JWT tokens for admin access
@@ -142,6 +158,10 @@ A comprehensive, JWT-protected admin area with full CRUD operations.
 - **referral_code_usage:** IP/session-based usage tracking
 - **event_settings:** Ticket availability and scarcity management
 - **waitlist:** Cross-project waitlist integration
+- **prospects:** Pre-landing form data with email verification
+- **email_verifications:** Double opt-in verification tokens
+- **users:** Admin and user accounts with role-based access
+- **magic_links:** Session management for admin login
 
 ---
 
@@ -185,8 +205,10 @@ A comprehensive, JWT-protected admin area with full CRUD operations.
 ### 7.4. Cross-Project Integration
 - **Landing Page:** Two-step process (token → details) with anthracite styling
 - **Event Page:** URL parameter handling and session storage
-- **Database:** Shared PostgreSQL instance for both projects
+- **Database:** Shared Supabase PostgreSQL instance for both projects
 - **API Integration:** Unified backend serving both frontends
+- **Email Verification:** Double opt-in flow with soft-gate banner
+- **Language Persistence:** EN/DE selection saved across page reloads
 
 ---
 
@@ -195,52 +217,79 @@ A comprehensive, JWT-protected admin area with full CRUD operations.
 - **Frontend (Event Page):** https://kinkly-main.vercel.app
 - **Frontend (Landing Page):** https://kinkly-preloader.vercel.app  
 - **Backend:** https://kinkly-backend.onrender.com
-- **Database:** PostgreSQL on Render (Production)
-- **Email Service:** Resend (Production)
+- **Database:** Supabase PostgreSQL (Production, migrated from Render)
+- **Email Service:** Resend (Production, domain verification in progress)
 - **Payment Processing:** Stripe + PayPal (Production)
 
 **All systems operational and ready for production use.** 🚀
 
 ---
 
+## 5.2. Email Sending Configuration (Resend + DNS for kinkly.eu)
+
+To ensure reliable delivery and prevent “The recipient's mail server permanently rejected the email.” errors, the domain `kinkly.eu` must be verified in Resend and have proper DNS records (SPF/DKIM) configured at the DNS provider (Strato).
+
+### Required Environment Variables (Backend)
+- `RESEND_API_KEY` → API key from Resend
+- `EMAIL_FROM` → `waitlist@kinkly.eu` (must be on the verified domain)
+
+### Resend Domain Setup
+1. Open Resend → Domains → Add Domain → enter `kinkly.eu`.
+2. Copy the DNS records (TXT for domain verification, SPF, DKIM).
+3. Add these records at your DNS provider (Strato). Wait for verification to turn green in Resend.
+
+### Strato DNS – Where to add records
+- Log in to Strato → Domains → verwalten → DNS Einstellungen.
+- Add the following records (values come from Resend domain page):
+  - TXT (root `@`): Resend verification TXT value
+  - TXT (SPF at root `@`): `v=spf1 include:resend.com ~all`
+  - CNAME (Host `resend._domainkey`): DKIM target provided by Resend
+
+Notes:
+- DNS propagation can take 5–60 minutes. Verify status in Resend.
+- `EMAIL_FROM` must use the verified domain, e.g., `waitlist@kinkly.eu`.
+- After DNS is verified, re‑test sending (waitlist and admin “Send Invite”).
+
+---
+
 ## 9. Future Enhancements & TODOs
 
-### 9.1. E-Mail-Strategie & Automation
+### 9.1. E-Mail-Strategie & Automation ✅ IN PROGRESS
 - **E-Mail-Architektur implementieren:**
-  - `circle@kingly.eu` → Circle-Mitglieder Bestätigungen
-  - `events@kingly.eu` → Event-Updates für alle Interessenten  
-  - `kontakt@k-production.eu` → Business-Kommunikation nach außen
-  - `noreply@send.kingly.eu` → System-E-Mails (Magic Links, etc.)
-- **Resend-Konfiguration** für alle E-Mail-Templates anpassen
+  - `waitlist@kinkly.eu` → Waitlist und System-E-Mails (CURRENT)
+  - `circle@kinkly.eu` → Circle-Mitglieder Bestätigungen
+  - `events@kinkly.eu` → Event-Updates für alle Interessenten  
+  - `kontakt@kinkly.eu` → Business-Kommunikation nach außen
+- **Resend-Konfiguration** für kinkly.eu Domain (DNS setup in progress)
 - **E-Mail-Automation** für Circle-Journey (Waitlist → Circle → Events)
 - **Business-E-Mail-Templates** für externe Partner-Kommunikation
 
-### 9.2. DSGVO-Compliance
-- [ ] Cookie-Consent Banner (`react-cookie-consent`)
-- [ ] Datenschutz-Seite aktualisieren
-- [ ] AGB-Seite erstellen
-- [ ] Impressum vervollständigen
+### 9.2. DSGVO-Compliance ✅ IMPLEMENTED
+- [x] Cookie-Consent Banner (Custom implementation)
+- [x] Datenschutz-Seite (Comprehensive with K | PRODUKTION details)
+- [x] AGB-Seite (With exclusive club recording policies)
+- [x] Impressum (Complete legal information for K | PRODUKTION)
 
-### 9.3. Erweiterte Admin-Features
-- [ ] E-Mail-Kampagnen-System
-- [ ] Erweiterte Analytics und Berichte
-- [ ] Bulk-Operations für Benutzer
+### 9.3. Erweiterte Admin-Features ✅ PARTIALLY IMPLEMENTED
+- [x] E-Mail-Kampagnen-System (Waitlist invitations, admin send invites)
+- [x] Erweiterte Analytics und Berichte (Revenue tracking, application stats)
+- [x] Bulk-Operations für Benutzer (User management, code assignment)
 - [ ] Audit-Log für Admin-Aktionen
 
-### 9.4. Benutzer-Experience
-- [ ] Erweiterte Animationen und Übergänge
-- [ ] Mobile-Optimierung verfeinern
-- [ ] Loading-States verbessern
-- [ ] Error-Handling optimieren
+### 9.4. Benutzer-Experience ✅ PARTIALLY IMPLEMENTED
+- [x] Erweiterte Animationen und Übergänge (K-Logo animation, ticket counters, success animations)
+- [x] Mobile-Optimierung verfeinern (Responsive design, mobile-first approach)
+- [x] Loading-States verbessern (Preloader, form states, admin panel)
+- [x] Error-Handling optimieren (Server error display, validation messages)
 
-### 9.5. Technische Verbesserungen
-- [ ] Performance-Optimierung
-- [ ] Code-Refactoring
+### 9.5. Technische Verbesserungen ✅ PARTIALLY IMPLEMENTED
+- [x] Performance-Optimierung (Database migration to Supabase, optimized queries)
+- [x] Code-Refactoring (Modular components, clean architecture)
 - [ ] Unit-Tests hinzufügen
-- [ ] Monitoring und Logging
+- [x] Monitoring und Logging (Comprehensive backend logging, error tracking)
 
-### 9.6. Erweiterte Features
-- [ ] Multi-Event-Support
-- [ ] Erweiterte Zahlungsoptionen
+### 9.6. Erweiterte Features ✅ PARTIALLY IMPLEMENTED
+- [x] Multi-Event-Support (Event settings table, scalable architecture)
+- [x] Erweiterte Zahlungsoptionen (Stripe + PayPal integration)
 - [ ] Social-Media-Integration
 - [ ] Push-Notifications

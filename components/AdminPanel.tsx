@@ -13,6 +13,7 @@ interface User {
   created_at: string;
   referral_count?: number;
   role?: string; // super_admin, admin, elite, circle, anwerber, warteliste
+  email_verified?: boolean; // Email verification status
 }
 
 interface ReferralCode {
@@ -571,6 +572,7 @@ const AdminPanel: React.FC = () => {
                       <th className="text-left py-3 px-4">First Name</th>
                       <th className="text-left py-3 px-4">Last Name</th>
                       <th className="text-left py-3 px-4">Email</th>
+                      <th className="text-left py-3 px-4">Status</th>
                       <th className="text-left py-3 px-4">Elite Passcode</th>
                       <th className="text-left py-3 px-4">Joined</th>
                       <th className="text-left py-3 px-4">Actions</th>
@@ -582,6 +584,17 @@ const AdminPanel: React.FC = () => {
                         <td className="py-3 px-4">{person.first_name}</td>
                         <td className="py-3 px-4">{person.last_name}</td>
                         <td className="py-3 px-4">{person.email}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              person.email_verified 
+                                ? 'bg-green-600 text-white' 
+                                : 'bg-yellow-600 text-white'
+                            }`}>
+                              {person.email_verified ? '✓ Verified' : '⏳ Pending'}
+                            </span>
+                          </div>
+                        </td>
                         <td className="py-3 px-4">
                           {person.referral_code ? (
                             <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">

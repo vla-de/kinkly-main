@@ -20,13 +20,24 @@ const SESSION_SECRET = process.env.SESSION_SECRET || 'dev_session_secret_change_
 
 // E-Mail-Client-Initialisierung
 const resend = new Resend(process.env.RESEND_API_KEY);
-const EMAIL_FROM = process.env.EMAIL_FROM || 'Kinkly Berlin <invite@send.kinkly.eu>';
+
+// E-Mail-Architektur
+const EMAIL_ADDRESSES = {
+  SYSTEM: process.env.EMAIL_SYSTEM || 'noreply@kinkly.eu',      // System-E-Mails (Verifizierung, Magic Links)
+  WAITLIST: process.env.EMAIL_WAITLIST || 'waitlist@kinkly.eu', // Waitlist-spezifische E-Mails
+  CONTACT: process.env.EMAIL_CONTACT || 'contact@kinkly.eu',    // Öffentliche Kontaktadresse
+  CIRCLE: process.env.EMAIL_CIRCLE || 'circle@kinkly.eu',       // Elite-Einladungen
+  EVENTS: process.env.EMAIL_EVENTS || 'events@kinkly.eu'        // Event-Updates
+};
+
+// Default sender (for system emails like verification, magic links)
+const EMAIL_FROM = process.env.EMAIL_FROM || `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`;
 
 // E-Mail-Hilfsfunktionen
-const sendEmail = async (to, subject, html, text) => {
+const sendEmail = async (to, subject, html, text, from = EMAIL_FROM) => {
   try {
     const { data, error } = await resend.emails.send({
-      from: EMAIL_FROM,
+      from: from,
       to: [to],
       subject: subject,
       html: html,
@@ -42,6 +53,31 @@ const sendEmail = async (to, subject, html, text) => {
     return { success: true, data };
   } catch (error) {
     console.error('Error sending email:', error);
+    return { success: false, error };
+  }
+};
+
+// Send email with CC to waitlist@kinkly.eu
+const sendEmailWithCC = async (to, subject, html, text, from = EMAIL_FROM) => {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: from,
+      to: [to],
+      cc: [EMAIL_ADDRESSES.WAITLIST],
+      subject: subject,
+      html: html,
+      text: text
+    });
+    
+    if (error) {
+      console.error('Error sending email with CC:', error);
+      return { success: false, error };
+    }
+    
+    console.log('Email sent successfully with CC:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error sending email with CC:', error);
     return { success: false, error };
   }
 };
@@ -90,7 +126,12 @@ const sendEventInviteEmail = async (email, firstName, lastName, referralCode, cu
     This is an exclusive invitation. Please do not share this link.
   `;
   
-  const result = await sendEmail(email, subject, html, text);
+  // Use circle@ for elite invitations, waitlist@ for waitlist
+  const fromAddress = referralCode 
+    ? `Kinkly Berlin <${EMAIL_ADDRESSES.CIRCLE}>`
+    : `Kinkly Berlin <${EMAIL_ADDRESSES.WAITLIST}>`;
+  
+  const result = await sendEmailWithCC(email, subject, html, text, fromAddress);
   console.log('Email send result:', result);
   return result;
 };
@@ -605,7 +646,8 @@ app.post('/api/auth/request-magic-link', async (req, res) => {
       email,
       'Your secure login link',
       `<p>Click to login: <a href="${loginUrl}">Login</a> (valid 15 minutes)</p>`,
-      `Login: ${loginUrl} (valid 15 minutes)`
+      `Login: ${loginUrl} (valid 15 minutes)`,
+      `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`
     );
     res.json({ success: true });
   } catch (e) {
@@ -880,7 +922,8 @@ app.post('/api/auth/request-email-verification', async (req, res) => {
       email,
       'Verify your email address',
       `<p>Confirm your email: <a href="${verifyUrl}">Verify</a> (valid 24h)</p>`,
-      `Verify: ${verifyUrl} (valid 24h)`
+      `Verify: ${verifyUrl} (valid 24h)`,
+      `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`
     );
     res.json({ success: true });
   } catch (e) {
@@ -1231,8 +1274,11 @@ app.get('/api/admin/waitlist', authenticateAdmin, async (req, res) => {
   try {
     console.log('Fetching waitlist entries...');
     const result = await pool.query(`
-      SELECT * FROM waitlist 
-      ORDER BY created_at DESC
+      SELECT w.*, 
+             CASE WHEN ev.verified_at IS NOT NULL THEN true ELSE false END as email_verified
+      FROM waitlist w
+      LEFT JOIN email_verifications ev ON w.email = ev.email AND ev.verified_at IS NOT NULL
+      ORDER BY w.created_at DESC
     `);
     console.log(`Found ${result.rows.length} waitlist entries`);
     res.json(result.rows);
@@ -1597,6 +1643,21 @@ app.post('/api/waitlist', async (req, res) => {
     `, [firstName || null, lastName || null, email, referralCode || null]);
     
     console.log('Waitlist entry created/updated:', result.rows[0]);
+    
+    // Send welcome email to waitlist member
+    try {
+      const emailResult = await sendEventInviteEmail(
+        email, 
+        firstName || 'Friend', 
+        lastName || '', 
+        referralCode, 
+        "Thank you for joining our waitlist. We'll be in touch soon with exclusive updates about our upcoming events."
+      );
+      console.log('Waitlist welcome email result:', emailResult);
+    } catch (emailError) {
+      console.error('Failed to send waitlist welcome email:', emailError);
+      // Don't fail the request if email fails
+    }
     
     res.json({ 
       success: true, 
