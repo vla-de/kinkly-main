@@ -619,7 +619,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.options('*', cors({
+app.options('/(.*)', cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
     if (FRONTEND_ORIGINS.includes(origin)) return cb(null, true);
