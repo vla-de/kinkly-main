@@ -10,6 +10,7 @@ interface User {
   tier: string;
   status: string;
   is_referrer: boolean;
+  is_buyer?: boolean;
   created_at: string;
   referral_count?: number;
   codes_count?: number;
@@ -433,11 +434,14 @@ const AdminPanel: React.FC = () => {
                         <td className="py-3 px-4">{user.last_name}</td>
                         <td className="py-3 px-4">{user.email}</td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            user.is_referrer ? 'bg-green-900 text-green-200' : 'bg-gray-700 text-gray-300'
-                          }`}>
-                            {user.is_referrer ? 'Referrer' : 'User'}
-                          </span>
+                          <div className="flex gap-2">
+                            <span className={`px-2 py-1 rounded text-xs ${user.is_referrer ? 'bg-green-900 text-green-200' : 'bg-gray-700 text-gray-300'}`}>
+                              {user.is_referrer ? 'Referrer' : 'User'}
+                            </span>
+                            {user.is_buyer && (
+                              <span className="px-2 py-1 rounded text-xs bg-blue-900 text-blue-200">Buyer</span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4">{user.codes_count ?? 0} / {user.logins_count ?? 0} / {user.sales_count ?? 0}</td>
                         <td className="py-3 px-4">{new Date(user.created_at).toLocaleDateString()}</td>

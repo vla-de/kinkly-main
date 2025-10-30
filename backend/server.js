@@ -1362,6 +1362,7 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
         a.status,
         a.created_at,
         EXISTS(SELECT 1 FROM referral_codes rcc WHERE rcc.user_id = a.id) AS is_referrer,
+        EXISTS(SELECT 1 FROM payments p WHERE p.application_id = a.id AND p.status IN ('completed','succeeded','paid')) AS is_buyer,
         (SELECT COUNT(*) FROM referral_codes rcc WHERE rcc.user_id = a.id) AS codes_count,
         (SELECT COUNT(*) FROM referral_code_usage u WHERE u.referral_code_id IN (SELECT id FROM referral_codes rcu WHERE rcu.user_id = a.id)) AS logins_count,
         (SELECT COUNT(*) FROM payments p 
