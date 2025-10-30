@@ -12,6 +12,9 @@ interface User {
   is_referrer: boolean;
   created_at: string;
   referral_count?: number;
+  codes_count?: number;
+  logins_count?: number;
+  sales_count?: number;
   role?: string; // super_admin, admin, elite, circle, anwerber, warteliste
   email_verified?: boolean; // Email verification status
 }
@@ -331,6 +334,25 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  const convertWaitlistToUser = async (waitlistId: number) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch(`/api/admin/waitlist/${waitlistId}/convert`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        alert('Converted to user.');
+        fetchData();
+      } else {
+        const err = await res.json().catch(()=>({}));
+        alert(err.error || 'Failed to convert');
+      }
+    } catch (e) {
+      alert('Network error');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-gray-300 p-6">
       <div className="max-w-7xl mx-auto">
@@ -399,7 +421,7 @@ const AdminPanel: React.FC = () => {
                       <th className="text-left py-3 px-4">Last Name</th>
                       <th className="text-left py-3 px-4">Email</th>
                       <th className="text-left py-3 px-4">Type</th>
-                      <th className="text-left py-3 px-4">Referrals</th>
+                      <th className="text-left py-3 px-4">Codes / Logins / Sales</th>
                       <th className="text-left py-3 px-4">Joined</th>
                       <th className="text-left py-3 px-4">Actions</th>
                     </tr>
@@ -417,7 +439,7 @@ const AdminPanel: React.FC = () => {
                             {user.is_referrer ? 'Referrer' : 'User'}
                           </span>
                         </td>
-                        <td className="py-3 px-4">{user.referral_count || 0} Codes/Logins</td>
+                        <td className="py-3 px-4">{user.codes_count ?? 0} / {user.logins_count ?? 0} / {user.sales_count ?? 0}</td>
                         <td className="py-3 px-4">{new Date(user.created_at).toLocaleDateString()}</td>
                         <td className="py-3 px-4">
                           <div className="flex space-x-1">
@@ -617,6 +639,12 @@ const AdminPanel: React.FC = () => {
                               className="btn-exclusive bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs"
                             >
                               Send Invite
+                            </button>
+                            <button
+                              onClick={() => convertWaitlistToUser(person.id)}
+                              className="btn-exclusive bg-green-700 hover:bg-green-600 text-white px-3 py-1 text-xs"
+                            >
+                              Convert → User
                             </button>
                             {!person.referral_code && (
                               <select

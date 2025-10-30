@@ -481,13 +481,13 @@ const initializeDb = async () => {
         // Create new table
         await pool.query(`
           CREATE TABLE event_settings (
-            id INTEGER PRIMARY KEY DEFAULT 1,
+        id INTEGER PRIMARY KEY DEFAULT 1,
             invitation_tickets INTEGER DEFAULT 20,
             circle_tickets INTEGER DEFAULT 15,
             sanctum_tickets INTEGER DEFAULT 10,
-            updated_at TIMESTAMPTZ DEFAULT NOW()
-          );
-        `);
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
         console.log('Event settings table created successfully');
       }
     }
@@ -566,14 +566,14 @@ const initializeDb = async () => {
         // Create new table
         await pool.query(`
           CREATE TABLE waitlist (
-            id SERIAL PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
             first_name VARCHAR(255) NOT NULL,
             last_name VARCHAR(255) NOT NULL,
-            email VARCHAR(255) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
             referral_code VARCHAR(50),
-            created_at TIMESTAMPTZ DEFAULT NOW()
-          );
-        `);
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
         console.log('Waitlist table created successfully');
       }
     }
@@ -1132,6 +1132,7 @@ app.post('/api/applications', limitApplicationsIp, formGuards(), async (req, res
   if (rejectDisposableEmail(email)) {
     return res.status(400).json({ error: 'Disposable email addresses are not allowed' });
   }
+  // If exists in waitlist, we proceed but will mark prospect converted later
   
   try {
     if (!pool) {
@@ -1327,12 +1328,14 @@ app.get('/api/admin/users', authenticateAdmin, async (req, res) => {
         a.tier,
         a.status,
         a.created_at,
-        CASE WHEN rc.user_id IS NOT NULL THEN true ELSE false END as is_referrer,
-        COUNT(rc2.id) as referral_count
+        EXISTS(SELECT 1 FROM referral_codes rcc WHERE rcc.user_id = a.id) AS is_referrer,
+        (SELECT COUNT(*) FROM referral_codes rcc WHERE rcc.user_id = a.id) AS codes_count,
+        (SELECT COUNT(*) FROM referral_code_usage u WHERE u.referral_code_id IN (SELECT id FROM referral_codes rcu WHERE rcu.user_id = a.id)) AS logins_count,
+        (SELECT COUNT(*) FROM payments p 
+           JOIN applications ap ON ap.id = p.application_id
+           WHERE ap.referral_code_id IN (SELECT id FROM referral_codes rcs WHERE rcs.user_id = a.id)
+             AND p.status IN ('completed','succeeded','paid')) AS sales_count
       FROM applications a
-      LEFT JOIN referral_codes rc ON a.id = rc.user_id
-      LEFT JOIN referral_codes rc2 ON rc2.user_id = a.id
-      GROUP BY a.id, a.first_name, a.last_name, a.email, a.message, a.tier, a.status, a.created_at, rc.user_id
       ORDER BY a.created_at DESC
     `);
     res.json(result.rows);
@@ -1373,6 +1376,11 @@ app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
   }
   
   try {
+    // Block if email exists in waitlist
+    const w = await pool.query('SELECT 1 FROM waitlist WHERE email = $1', [email]);
+    if (w.rows.length > 0) {
+      return res.status(409).json({ error: 'Email already exists in waitlist. Convert instead of creating duplicate.' });
+    }
     const result = await pool.query(
       'INSERT INTO applications (first_name, last_name, email, message, tier, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [firstName, lastName, email, message || null, tier, 'pending_review']
@@ -1381,6 +1389,30 @@ app.post('/api/admin/users', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error creating user:', error);
     res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// Admin: convert waitlist entry to user (application)
+app.post('/api/admin/waitlist/:id/convert', authenticateAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid waitlist id' });
+    const wl = await pool.query(`SELECT * FROM waitlist WHERE id = $1`, [id]);
+    if (wl.rows.length === 0) return res.status(404).json({ error: 'Waitlist entry not found' });
+    const w = wl.rows[0];
+    // prevent duplicate users
+    const exists = await pool.query(`SELECT 1 FROM applications WHERE email = $1`, [w.email]);
+    if (exists.rows.length > 0) return res.status(409).json({ error: 'Email already exists as user' });
+    // create user with tier 'waitlist'
+    const created = await pool.query(
+      `INSERT INTO applications (first_name, last_name, email, message, tier, status)
+       VALUES ($1,$2,$3,$4,'waitlist','pending_review') RETURNING *`,
+      [w.first_name || '', w.last_name || '', w.email, null]
+    );
+    res.json({ success: true, user: created.rows[0] });
+  } catch (e) {
+    console.error('convert waitlist error:', e);
+    res.status(500).json({ error: 'Failed to convert waitlist entry' });
   }
 });
 
@@ -1753,7 +1785,7 @@ app.post('/api/auth/validate-code', limitValidateCodeIp, async (req, res) => {
   if (!code) {
     return res.status(400).json({ error: 'Code is required' });
   }
-
+  
   try {
     // Get client IP and session info
     const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
@@ -1774,10 +1806,19 @@ app.post('/api/auth/validate-code', limitValidateCodeIp, async (req, res) => {
     }
     
     const referralCode = result.rows[0];
-    
-    // Note: We no longer block validation by session/IP.
-    // Usage is only incremented on successful purchase in payment handlers.
-    
+
+    // Record a non-destructive usage (login/entry attempt) for analytics
+    try {
+      await pool.query(
+        `INSERT INTO referral_code_usage (referral_code_id, ip_address, user_agent, session_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (referral_code_id, ip_address, session_id) DO NOTHING`,
+        [referralCode.id, clientIP, userAgent, sessionId]
+      );
+    } catch (e) {
+      console.warn('referral_code_usage insert warning:', e.message);
+    }
+
     res.json({ 
       valid: true, 
       referrerId: referralCode.user_id,
@@ -1864,6 +1905,11 @@ app.post('/api/waitlist', limitWaitlistIp, formGuards(), async (req, res) => {
   if (rejectDisposableEmail(email)) {
     return res.status(400).json({ error: 'Disposable email addresses are not allowed' });
   }
+  // Prevent duplicate with applications
+  const existsInApps = await pool.query('SELECT 1 FROM applications WHERE email = $1', [email]);
+  if (existsInApps.rows.length > 0) {
+    return res.status(409).json({ error: 'Email already exists as user. Please login instead.' });
+  }
   
   if (!pool) {
     console.error('Database pool not available');
@@ -1893,7 +1939,7 @@ app.post('/api/waitlist', limitWaitlistIp, formGuards(), async (req, res) => {
         `INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)`,
         [email, token, expiresAt]
       );
-      const verifyUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/verify-email?token=${token}&redirect=${encodeURIComponent('https://kinkly-main.vercel.app/event')}`;
+      const verifyUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/verify-email?token=${token}&redirect=${encodeURIComponent('https://kinkly-main.vercel.app')}`;
       await sendEmail(
         email,
         'Please confirm your email address',
