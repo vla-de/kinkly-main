@@ -33,6 +33,47 @@ const EMAIL_ADDRESSES = {
 // Default sender (for system emails like verification, magic links)
 const EMAIL_FROM = process.env.EMAIL_FROM || `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`;
 
+// --- Lightweight in-memory rate limiter ---
+const rateLimitBuckets = new Map();
+function createRateLimiter(options) {
+  const windowMs = options.windowMs;
+  const max = options.max;
+  const keyGenerator = options.keyGenerator || ((req) => req.ip || req.headers['x-forwarded-for'] || 'unknown');
+  return function rateLimiter(req, res, next) {
+    const now = Date.now();
+    const key = keyGenerator(req);
+    let bucket = rateLimitBuckets.get(key);
+    if (!bucket) {
+      bucket = [];
+      rateLimitBuckets.set(key, bucket);
+    }
+    // drop old
+    while (bucket.length && (now - bucket[0]) > windowMs) bucket.shift();
+    if (bucket.length >= max) {
+      return res.status(429).json({ error: 'Too many requests. Try again later.' });
+    }
+    bucket.push(now);
+    next();
+  };
+}
+
+// Specific limiters
+const limitMagicLinkIp = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20 }); // 20/hour per IP
+const limitEmailVerifyIp = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20 }); // 20/hour per IP
+const limitWaitlistIp = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 60 }); // 60/hour per IP
+const limitApplicationsIp = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 10 }); // 10/10min per IP
+const limitValidateCodeIp = createRateLimiter({ windowMs: 10 * 60 * 1000, max: 120 }); // 120/10min per IP
+
+// Disposable email domain guard (basic)
+const DISPOSABLE_DOMAINS = new Set([
+  'mailinator.com','guerrillamail.com','10minutemail.com','tempmail.com','yopmail.com','discard.email','trashmail.com'
+]);
+function rejectDisposableEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const domain = (email.split('@')[1] || '').toLowerCase();
+  return DISPOSABLE_DOMAINS.has(domain);
+}
+
 // E-Mail-Hilfsfunktionen
 const sendEmail = async (to, subject, html, text, from = EMAIL_FROM) => {
   try {
@@ -618,7 +659,7 @@ app.get('/api/auth/me', authenticateUser, async (req, res) => {
 });
 
 // --- Auth: Magic link flow ---
-app.post('/api/auth/request-magic-link', async (req, res) => {
+app.post('/api/auth/request-magic-link', limitMagicLinkIp, async (req, res) => {
   const { email, redirectUrl } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
   try {
@@ -905,7 +946,7 @@ app.get('/api/user/referrer-stats', authenticateUser, async (req, res) => {
 });
 
 // --- Auth: Email verification flow ---
-app.post('/api/auth/request-email-verification', async (req, res) => {
+app.post('/api/auth/request-email-verification', limitEmailVerifyIp, async (req, res) => {
   const { email, redirectUrl } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
   try {
@@ -962,10 +1003,13 @@ app.get('/db/health', async (req, res) => {
 });
 
 // Create a new application
-app.post('/api/applications', async (req, res) => {
+app.post('/api/applications', limitApplicationsIp, async (req, res) => {
   const { firstName, lastName, email, message, tier, referralCodeId, elitePasscode } = req.body;
   if (!firstName || !lastName || !email || !tier) {
     return res.status(400).json({ error: 'First name, last name, email, and tier are required.' });
+  }
+  if (rejectDisposableEmail(email)) {
+    return res.status(400).json({ error: 'Disposable email addresses are not allowed' });
   }
   
   try {
@@ -1509,7 +1553,7 @@ app.put('/api/admin/scarcity', authenticateAdmin, async (req, res) => {
 });
 
 // Elite Passcode validation endpoint
-app.post('/api/auth/validate-code', async (req, res) => {
+app.post('/api/auth/validate-code', limitValidateCodeIp, async (req, res) => {
   const { code } = req.body;
   
   if (!code) {
@@ -1614,7 +1658,7 @@ app.post('/api/check-email', async (req, res) => {
 });
 
 // Waitlist endpoint
-app.post('/api/waitlist', async (req, res) => {
+app.post('/api/waitlist', limitWaitlistIp, async (req, res) => {
   console.log('Waitlist API called with:', req.body);
   
   const { firstName, lastName, email, referralCode } = req.body;
@@ -1622,6 +1666,9 @@ app.post('/api/waitlist', async (req, res) => {
   if (!email) {
     console.log('Validation failed (email required):', { email });
     return res.status(400).json({ error: 'Email is required' });
+  }
+  if (rejectDisposableEmail(email)) {
+    return res.status(400).json({ error: 'Disposable email addresses are not allowed' });
   }
   
   if (!pool) {

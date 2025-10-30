@@ -171,7 +171,7 @@ const PreloaderLanding: React.FC = () => {
       const res = await fetch(`${API_BASE}/api/auth/request-magic-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), redirectUrl: window.location.origin + '/event' })
+        body: JSON.stringify({ email: email.trim(), redirectUrl: window.location.origin + '/event?member=1' })
       });
       if (res.ok) {
         setMessage(language === 'en' ? 'We sent you a secure login link.' : 'Wir haben dir einen sicheren Login‑Link gesendet.');

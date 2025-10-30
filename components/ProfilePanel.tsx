@@ -54,7 +54,7 @@ const ProfilePanel: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="max-w-6xl mx-auto px-6 mb-8">
+    <div id="profile-panel" className="max-w-6xl mx-auto px-6 mb-8">
       <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>

@@ -109,7 +109,20 @@ const App: React.FC = () => {
     (async () => {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'include' });
-        setIsAuthenticated(res.ok);
+        const ok = res.ok;
+        setIsAuthenticated(ok);
+        // After login via magic link, focus member dashboard
+        const params = new URLSearchParams(window.location.search);
+        if (ok && params.get('member') === '1') {
+          setTimeout(() => {
+            const el = document.getElementById('profile-panel');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
+          // Clean URL
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('member');
+          window.history.replaceState({}, '', newUrl.toString());
+        }
       } catch {
         setIsAuthenticated(false);
       }
