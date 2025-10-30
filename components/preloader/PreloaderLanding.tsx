@@ -414,9 +414,11 @@ const PreloaderLanding: React.FC = () => {
                             <label className="flex items-start gap-2 text-xs text-gray-400 leading-snug">
                               <input type="checkbox" checked={waitlistConsent} onChange={(e) => setWaitlistConsent(e.target.checked)} className="mt-1" />
                               <span>
-                                {language === 'en' ? 'I agree to data processing and accept the ' : 'Ich willige in die Datenverarbeitung ein und akzeptiere die '}
+                                {language === 'en'
+                                  ? 'By clicking, you agree to our '
+                                  : 'Mit Klick stimmst du unserer '}
                                 <button type="button" onClick={handleDatenschutzClick} className="underline hover:text-gray-300">{language === 'en' ? 'privacy policy' : 'Datenschutzerklärung'}</button>
-                                .
+                                {language === 'en' ? '.' : ' zu.'}
                               </span>
                             </label>
                             <button disabled={loading || !email} className="w-full bg-white text-black py-4 font-semibold rounded-lg disabled:opacity-60 hover:bg-gray-100 transition-all text-lg">
@@ -431,13 +433,7 @@ const PreloaderLanding: React.FC = () => {
                               {language==='en' ? 'Have a passcode? Enter it here' : 'Passcode vorhanden? Hier eingeben'}
                             </button>
                           </div>
-                          <p className="text-xs text-gray-500 text-center mt-4">
-                            {language === 'en' ? 'By joining you agree to our ' : 'Mit Klick stimmst du unserer '}
-                            <button onClick={handleDatenschutzClick} className="underline hover:text-gray-300">
-                              {language === 'en' ? 'privacy policy' : 'Datenschutzerklärung'}
-                            </button>
-                            .
-                          </p>
+                          {/* duplicate privacy line removed per request */}
                         </div>
                       )}
 

@@ -262,6 +262,44 @@ const sendEventInviteEmail = async (email, firstName, lastName, referralCode, cu
   return result;
 };
 
+// Email: purchase approved
+const sendPurchaseApprovedEmail = async (email, firstName, lastName, tier) => {
+  try {
+    // Try template
+    const tpl = await pool.query(`SELECT subject, html, text_body FROM email_templates WHERE template_key = 'purchase_approved' LIMIT 1`);
+    if (tpl.rows.length) {
+      const { subject, html, text_body } = tpl.rows[0];
+      const renderedHtml = (html || '')
+        .replace(/{{firstName}}/g, firstName)
+        .replace(/{{lastName}}/g, lastName)
+        .replace(/{{tier}}/g, tier || '');
+      const renderedText = (text_body || '')
+        .replace(/{{firstName}}/g, firstName)
+        .replace(/{{lastName}}/g, lastName)
+        .replace(/{{tier}}/g, tier || '');
+      return await sendEmailWithBCC(
+        email,
+        subject,
+        renderedHtml,
+        renderedText,
+        `Kinkly Berlin <${EMAIL_ADDRESSES.CIRCLE}>`,
+        [EMAIL_ADDRESSES.CIRCLE]
+      );
+    }
+  } catch (e) {
+    console.error('purchase approved template error:', e);
+  }
+  // Fallback simple message
+  return await sendEmailWithBCC(
+    email,
+    'Your Kinkly access has been approved',
+    `<div style="font-family: Arial; background:#000; color:#fff; padding:20px;">Welcome, ${firstName} ${lastName}. Your application for ${tier} is approved.</div>`,
+    `Approved for ${tier}`,
+    `Kinkly Berlin <${EMAIL_ADDRESSES.CIRCLE}>`,
+    [EMAIL_ADDRESSES.CIRCLE]
+  );
+};
+
 const sendConfirmationEmail = async (fullName, email, tier) => {
   const subject = 'Welcome to Kinkly Berlin - Your Application is Confirmed';
   const html = `
@@ -821,6 +859,43 @@ app.get('/api/auth/me', authenticateUser, async (req, res) => {
   } catch (e) {
     console.error('auth/me error:', e);
     res.status(500).json({ error: 'Failed to load user' });
+  }
+});
+
+// Admin: list purchases (pending_review and approved)
+app.get('/api/admin/purchases', authenticateAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT a.id, a.first_name, a.last_name, a.email, a.tier, a.status, a.created_at,
+             COALESCE(p.amount,0) as amount, p.provider, p.created_at as paid_at
+      FROM applications a
+      LEFT JOIN payments p ON a.id = p.application_id
+      WHERE a.status IN ('pending_review','approved')
+      ORDER BY a.created_at DESC
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    console.error('list purchases error:', e);
+    res.status(500).json({ error: 'Failed to fetch purchases' });
+  }
+});
+
+// Admin: approve purchase
+app.put('/api/admin/purchases/:id/approve', authenticateAdmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const r = await pool.query(
+      `UPDATE applications SET status='approved' WHERE id=$1 RETURNING id, first_name, last_name, email, tier, status`,
+      [id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Application not found' });
+
+    const row = r.rows[0];
+    await sendPurchaseApprovedEmail(row.email, row.first_name, row.last_name, row.tier);
+    res.json(row);
+  } catch (e) {
+    console.error('approve purchase error:', e);
+    res.status(500).json({ error: 'Failed to approve purchase' });
   }
 });
 
@@ -1751,6 +1826,12 @@ app.post('/api/admin/email-templates/seed', authenticateAdmin, async (req, res) 
         subject: 'Your secure login link',
         html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p>Click to login: <a href="{{loginUrl}}">Login</a> (valid 15 minutes)</p>\n</div>',
         text: 'Login: {{loginUrl}} (valid 15 minutes)'
+      },
+      {
+        key: 'purchase_approved',
+        subject: 'Your Kinkly access has been approved',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p>Dear {{firstName}} {{lastName}},</p>\n  <p>Your application for <strong>{{tier}}</strong> has been approved. Welcome.</p>\n</div>',
+        text: 'Dear {{firstName}} {{lastName}}, your application for {{tier}} has been approved.'
       }
     ];
     for (const d of defaults) {
@@ -1929,7 +2010,7 @@ app.post('/api/auth/validate-code', limitValidateCodeIp, async (req, res) => {
     }
     
     const referralCode = result.rows[0];
-
+    
     // Record a non-destructive usage (login/entry attempt) for analytics
     try {
       await pool.query(
@@ -1941,7 +2022,7 @@ app.post('/api/auth/validate-code', limitValidateCodeIp, async (req, res) => {
     } catch (e) {
       console.warn('referral_code_usage insert warning:', e.message);
     }
-
+    
     res.json({ 
       valid: true, 
       referrerId: referralCode.user_id,

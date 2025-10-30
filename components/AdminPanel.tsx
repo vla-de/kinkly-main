@@ -45,7 +45,8 @@ interface EventStats {
 
 const AdminPanel: React.FC = () => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'users' | 'referrals' | 'waitlist' | 'analytics' | 'scarcity' | 'emails'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'referrals' | 'waitlist' | 'analytics' | 'scarcity' | 'emails' | 'purchases'>('users');
+  const [purchases, setPurchases] = useState<any[]>([]);
   const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
   const [savingTemplateKey, setSavingTemplateKey] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -101,6 +102,15 @@ const AdminPanel: React.FC = () => {
           const referralsResponse = await fetch('/api/admin/referral-codes', { headers });
           const referralsData = await referralsResponse.json();
           setReferralCodes(referralsData);
+          break;
+        case 'purchases':
+          try {
+            const resp = await fetch('/api/admin/purchases', { headers });
+            const data = await resp.json();
+            setPurchases(Array.isArray(data) ? data : []);
+          } catch {
+            setPurchases([]);
+          }
           break;
         case 'waitlist':
           // Try admin endpoint first, fallback to direct database query
@@ -412,7 +422,8 @@ const AdminPanel: React.FC = () => {
             { key: 'waitlist', label: 'Waitlist' },
             { key: 'analytics', label: 'Analytics' },
             { key: 'scarcity', label: 'Scarcity Management' },
-            { key: 'emails', label: 'Emails' }
+            { key: 'emails', label: 'Emails' },
+            { key: 'purchases', label: 'Purchases' }
           ].map(tab => (
             <button
               key={tab.key}
@@ -549,6 +560,57 @@ const AdminPanel: React.FC = () => {
                           </tr>
                         )}
                       </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Purchases Tab */}
+          {activeTab === 'purchases' && !loading && (
+            <div>
+              <h2 className="font-serif-display text-2xl text-white mb-6">Purchases Review</h2>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="sticky top-0 bg-gray-900 z-10">
+                    <tr className="border-b border-gray-700">
+                      <th className="text-left py-3 px-4">Name</th>
+                      <th className="text-left py-3 px-4">Email</th>
+                      <th className="text-left py-3 px-4">Tier</th>
+                      <th className="text-left py-3 px-4">Status</th>
+                      <th className="text-left py-3 px-4">Paid</th>
+                      <th className="text-left py-3 px-4">When</th>
+                      <th className="text-left py-3 px-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchases.map((p) => (
+                      <tr key={p.id} className="border-b border-gray-800">
+                        <td className="py-2 px-4">{p.first_name} {p.last_name}</td>
+                        <td className="py-2 px-4">{p.email}</td>
+                        <td className="py-2 px-4">{p.tier}</td>
+                        <td className="py-2 px-4">{p.status}</td>
+                        <td className="py-2 px-4">{p.amount ? `€${(p.amount/100).toFixed(2)} ${p.provider||''}` : '-'}</td>
+                        <td className="py-2 px-4">{new Date(p.paid_at || p.created_at).toLocaleString()}</td>
+                        <td className="py-2 px-4 flex flex-wrap gap-2">
+                          {p.status !== 'approved' && (
+                            <button
+                              onClick={async () => {
+                                const token = localStorage.getItem('adminToken');
+                                const r = await fetch(`/api/admin/purchases/${p.id}/approve`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } });
+                                if (r.ok) fetchData();
+                              }}
+                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+                            >Approve</button>
+                          )}
+                          <a
+                            href={`https://www.google.com/search?q=${encodeURIComponent(p.first_name+' '+p.last_name+' '+p.email)}`}
+                            target="_blank" rel="noreferrer"
+                            className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded"
+                          >Google</a>
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
