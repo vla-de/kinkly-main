@@ -352,8 +352,7 @@ const PreloaderLanding: React.FC = () => {
           className="group inline-flex items-center gap-1 text-[#404040] text-sm sm:text-base bg-white/5 backdrop-blur px-3 py-2 sm:px-4 sm:py-2 rounded-full border border-[#404040]/20 hover:bg-[#404040]/10 transition-all"
           aria-label="Toggle language"
         >
-          <span className="group-hover:hidden">{language.toUpperCase()}</span>
-          <span className="hidden group-hover:inline">{(language === 'en' ? 'DE' : 'EN')}</span>
+          <span>{language === 'en' ? 'DE' : 'EN'}</span>
         </button>
       </div>
       
