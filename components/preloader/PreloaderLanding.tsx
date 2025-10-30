@@ -32,6 +32,7 @@ const PreloaderLanding: React.FC = () => {
   const [waitlistFirstName, setWaitlistFirstName] = useState('');
   const [waitlistLastName, setWaitlistLastName] = useState('');
   const [waitlistConsent, setWaitlistConsent] = useState<boolean>(false);
+  const [waitlistSubmitted, setWaitlistSubmitted] = useState<boolean>(false);
 
   const SCROLL_TRIGGER_DISTANCE = 50;
 
@@ -146,11 +147,19 @@ const PreloaderLanding: React.FC = () => {
         })
       });
       if (res.ok) {
-        setMessage(language === 'en' ? 'Welcome to the circle – we will be in touch.' : 'Willkommen im Kreis – wir melden uns.');
+        setMessage(language === 'en' ? 'Welcome to the waitlist – we will be in touch.' : 'Willkommen im Wartekreis – wir melden uns.');
         setEmail('');
         setWaitlistFirstName('');
         setWaitlistLastName('');
         setWaitlistConsent(false);
+        setWaitlistSubmitted(true);
+        setShowFooter(true);
+        // ensure footer/links become visible
+        setTimeout(() => {
+          try {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+          } catch {}
+        }, 200);
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error || (language === 'en' ? 'An error occurred.' : 'Ein Fehler ist aufgetreten.'));
@@ -323,7 +332,7 @@ const PreloaderLanding: React.FC = () => {
             <div className="h-full w-full overflow-y-auto overscroll-contain scrollbar-none">
                   <div className={`min-h-full flex flex-col items-center justify-center pb-8 space-y-8 transition-all duration-500 ease-in-out ${showFooter ? 'pt-[5vh] pb-32' : 'pt-[10vh]'}`}>
                 {/* Medusa shows from loading onwards */}
-                <div className={`flex items-center justify-center transition-opacity duration-[2000ms] ease-out ${phase === 'loading' || phase === 'formVisible' ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <div className={`flex items-center justify-center transition-opacity duration-[2000ms] ease-out ${waitlistSubmitted ? 'opacity-0 pointer-events-none' : (phase === 'loading' || phase === 'formVisible' ? 'opacity-100' : 'opacity-0 pointer-events-none')}`}>
                   <MedusaLoader />
                 </div>
 
@@ -360,7 +369,7 @@ const PreloaderLanding: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <div>
+                        <div className={`${waitlistSubmitted ? 'opacity-0 pointer-events-none transition-opacity duration-500' : 'opacity-100 transition-opacity duration-500'}`}>
                           <h2 className="font-serif-display text-2xl sm:text-3xl md:text-4xl text-white mb-6 text-center lg:text-left">{language==='en' ? 'JOIN THE CIRCLE.' : ''}</h2>
                           <form onSubmit={submitWaitlist} className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -398,7 +407,19 @@ const PreloaderLanding: React.FC = () => {
                         </div>
                       )}
 
-                      {message && <p className="text-green-400 text-center mt-4">{message}</p>}
+                      {message && (
+                        <div className="transition-all duration-500 mt-4">
+                          <p className="text-green-400 text-center">{message}</p>
+                          {/* keep passcode link available after success */}
+                          {waitlistSubmitted && (
+                            <div className="mt-3 text-center">
+                              <button type="button" onClick={() => setMode('code')} className="text-gray-300 hover:text-gray-100 underline text-sm">
+                                {language==='en' ? 'Have a passcode? Enter it here' : 'Passcode vorhanden? Hier eingeben'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {error && <p className="text-red-400 text-center mt-4">{error}</p>}
                     </div>
                   </div>
