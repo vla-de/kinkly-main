@@ -61,7 +61,11 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitli
       
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('referralCode', code.trim().toUpperCase());
+        const normalized = code.trim().toUpperCase();
+        localStorage.setItem('referralCode', normalized);
+        // ensure TicketForm recognizes validated code without re-entry
+        sessionStorage.setItem('elitePasscode', normalized);
+        localStorage.setItem('elitePasscode', normalized);
         localStorage.setItem('referrerId', data.referrerId);
         sessionStorage.setItem('referralCodeId', data.referralCodeId);
         onSuccess();
