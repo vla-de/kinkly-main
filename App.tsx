@@ -184,6 +184,58 @@ const App: React.FC = () => {
 
   return (
     <div className="bg-black min-h-screen text-gray-300 font-sans antialiased relative">
+      {/* Email Verification Soft-Gate Banner (non-sticky, above header) */}
+      {verificationPending && (
+        <div className="pt-3 px-3 md:px-4">
+          <div className="mx-auto max-w-[720px]">
+            <div className="bg-zinc-900/40 border border-zinc-600/30 text-zinc-200 px-3 py-2 md:px-4 md:py-2 rounded-md">
+              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 justify-between">
+                <span className="text-[11px] md:text-sm leading-snug">
+                  {`Bitte bestätige deine E‑Mail-Adresse${pendingEmail ? ' (' + pendingEmail + ')' : ''} – prüfe deinen Posteingang.`}
+                </span>
+                <div className="flex items-center gap-2 md:gap-3">
+                  <button
+                    onClick={async () => {
+                      if (!pendingEmail || resendState === 'sending') return;
+                      setResendState('sending');
+                      try {
+                        const res = await fetch('/api/auth/request-email-verification', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: pendingEmail, redirectUrl: window.location.origin + '/event' })
+                        });
+                        setResendState(res.ok ? 'sent' : 'error');
+                      } catch {
+                        setResendState('error');
+                      } finally {
+                        setTimeout(() => setResendState('idle'), 4000);
+                      }
+                    }}
+                    className="text-zinc-300 hover:text-white underline disabled:opacity-60 text-[11px] md:text-sm"
+                    disabled={!pendingEmail || resendState === 'sending'}
+                  >
+                    {resendState === 'sending' ? 'Sende…' : resendState === 'sent' ? 'Gesendet' : 'Mail erneut senden'}
+                  </button>
+                  <button
+                    onClick={() => setActiveModal('login')}
+                    className="text-zinc-300 hover:text-white underline text-[11px] md:text-sm"
+                  >
+                    Einloggen
+                  </button>
+                  <button
+                    onClick={() => setVerificationPending(false)}
+                    className="text-zinc-300 hover:text-white text-sm"
+                    aria-label="Banner schließen"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Header onLoginClick={handleOpenLogin} />
       
       {/* Magic Link Error Banner */}
@@ -201,57 +253,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Email Verification Soft-Gate Banner */}
-      {verificationPending && (
-        <div className="fixed left-0 right-0 top-0 z-40 mt-14 pointer-events-none">
-          <div className="mx-auto max-w-[720px] px-3 md:px-4">
-            <div className="pointer-events-auto bg-yellow-900/15 backdrop-blur border border-yellow-500/30 text-yellow-200 px-3 py-2 md:px-4 md:py-2 rounded-md shadow-[0_0_30px_rgba(255,200,50,0.06)]">
-              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 justify-between">
-                <span className="text-[11px] md:text-sm leading-snug">
-              {`Bitte bestätige deine E‑Mail-Adresse${pendingEmail ? ' (' + pendingEmail + ')' : ''} – prüfe deinen Posteingang.`}
-                </span>
-                <div className="flex items-center gap-2 md:gap-3">
-                  <button
-                onClick={async () => {
-                  if (!pendingEmail || resendState === 'sending') return;
-                  setResendState('sending');
-                  try {
-                    const res = await fetch('/api/auth/request-email-verification', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ email: pendingEmail, redirectUrl: window.location.origin + '/event' })
-                    });
-                    setResendState(res.ok ? 'sent' : 'error');
-                  } catch {
-                    setResendState('error');
-                  } finally {
-                    setTimeout(() => setResendState('idle'), 4000);
-                  }
-                }}
-                className="text-yellow-300 hover:text-yellow-100 underline disabled:opacity-60 text-[11px] md:text-sm"
-                disabled={!pendingEmail || resendState === 'sending'}
-              >
-                {resendState === 'sending' ? 'Sende…' : resendState === 'sent' ? 'Gesendet' : 'Mail erneut senden'}
-              </button>
-              <button
-                onClick={() => setActiveModal('login')}
-                className="text-yellow-300 hover:text-yellow-100 underline text-[11px] md:text-sm"
-              >
-                Einloggen
-              </button>
-              <button
-                onClick={() => setVerificationPending(false)}
-                className="text-yellow-400 hover:text-yellow-200 text-sm"
-                aria-label="Banner schließen"
-              >
-                ✕
-              </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* (Verification banner moved above header) */}
       
       <main>
         <ProfilePanel />
