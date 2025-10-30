@@ -57,6 +57,65 @@ function createRateLimiter(options) {
   };
 }
 
+// --- Honeypot & Time-Trap guards ---
+function formGuards(minMs = 2000) {
+  return (req, res, next) => {
+    try {
+      const body = req.body || {};
+      const honeypot = (body.website || body.hp || body.honeypot || '').toString().trim();
+      if (honeypot.length > 0) {
+        return res.status(400).json({ error: 'Spam detected' });
+      }
+      if (body.formRenderedAt) {
+        const renderedAt = Number(body.formRenderedAt);
+        if (Number.isFinite(renderedAt)) {
+          if (Date.now() - renderedAt < minMs) {
+            return res.status(400).json({ error: 'Form submitted too quickly' });
+          }
+        }
+      }
+      next();
+    } catch {
+      next();
+    }
+  };
+}
+
+// --- Cloudflare Turnstile verification ---
+const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET;
+async function verifyTurnstileToken(token, remoteip) {
+  if (!TURNSTILE_SECRET) return true; // if not configured, allow (dev)
+  try {
+    const params = new URLSearchParams();
+    params.append('secret', TURNSTILE_SECRET);
+    params.append('response', token || '');
+    if (remoteip) params.append('remoteip', remoteip);
+    const resp = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    });
+    const data = await resp.json();
+    return !!data.success;
+  } catch (e) {
+    console.error('Turnstile verify error:', e);
+    return false;
+  }
+}
+
+function requireTurnstile(actionName) {
+  return async (req, res, next) => {
+    try {
+      const token = req.body?.turnstileToken || req.headers['x-turnstile-token'];
+      const ok = await verifyTurnstileToken(token, req.ip);
+      if (!ok) return res.status(400).json({ error: 'Bot verification failed' });
+      next();
+    } catch (e) {
+      return res.status(400).json({ error: 'Bot verification failed' });
+    }
+  };
+}
+
 // Specific limiters
 const limitMagicLinkIp = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20 }); // 20/hour per IP
 const limitEmailVerifyIp = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 20 }); // 20/hour per IP
@@ -659,7 +718,7 @@ app.get('/api/auth/me', authenticateUser, async (req, res) => {
 });
 
 // --- Auth: Magic link flow ---
-app.post('/api/auth/request-magic-link', limitMagicLinkIp, async (req, res) => {
+app.post('/api/auth/request-magic-link', limitMagicLinkIp, requireTurnstile('magic_link'), formGuards(), async (req, res) => {
   const { email, redirectUrl } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
   try {
@@ -946,7 +1005,7 @@ app.get('/api/user/referrer-stats', authenticateUser, async (req, res) => {
 });
 
 // --- Auth: Email verification flow ---
-app.post('/api/auth/request-email-verification', limitEmailVerifyIp, async (req, res) => {
+app.post('/api/auth/request-email-verification', limitEmailVerifyIp, formGuards(), async (req, res) => {
   const { email, redirectUrl } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email is required' });
   try {
@@ -1003,7 +1062,7 @@ app.get('/db/health', async (req, res) => {
 });
 
 // Create a new application
-app.post('/api/applications', limitApplicationsIp, async (req, res) => {
+app.post('/api/applications', limitApplicationsIp, formGuards(), async (req, res) => {
   const { firstName, lastName, email, message, tier, referralCodeId, elitePasscode } = req.body;
   if (!firstName || !lastName || !email || !tier) {
     return res.status(400).json({ error: 'First name, last name, email, and tier are required.' });
@@ -1658,7 +1717,7 @@ app.post('/api/check-email', async (req, res) => {
 });
 
 // Waitlist endpoint
-app.post('/api/waitlist', limitWaitlistIp, async (req, res) => {
+app.post('/api/waitlist', limitWaitlistIp, formGuards(), async (req, res) => {
   console.log('Waitlist API called with:', req.body);
   
   const { firstName, lastName, email, referralCode } = req.body;
