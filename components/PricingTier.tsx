@@ -9,9 +9,10 @@ interface PricingTierProps {
   onSelect: () => void;
   ctaText: string;
   remainingTickets?: number;
+  locked?: boolean;
 }
 
-const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, features, isFeatured = false, onSelect, ctaText, remainingTickets }) => {
+const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, features, isFeatured = false, onSelect, ctaText, remainingTickets, locked = false }) => {
   const [previousTickets, setPreviousTickets] = useState<number | null>(null);
   const [showPurchaseAnimation, setShowPurchaseAnimation] = useState(false);
 
@@ -31,9 +32,11 @@ const PricingTier: React.FC<PricingTierProps> = ({ title, price, description, fe
   }`;
 
   const buttonClasses = `btn-exclusive mt-auto w-full py-3 px-8 tracking-wider font-semibold rounded-md ${
-    isFeatured
-      ? 'bg-white text-black hover:bg-gray-200'
-      : 'bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-800 hover:border-gray-500'
+    locked
+      ? 'bg-yellow-500 text-black hover:bg-yellow-400'
+      : (isFeatured
+          ? 'bg-white text-black hover:bg-gray-200'
+          : 'bg-transparent border border-gray-600 text-gray-300 hover:bg-gray-800 hover:border-gray-500')
   }`;
 
   return (

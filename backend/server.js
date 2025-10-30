@@ -1528,6 +1528,7 @@ app.get('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
     const result = await pool.query(`
       SELECT 
         rc.*,
+        (SELECT COUNT(*) FROM referral_code_usage u WHERE u.referral_code_id = rc.id) AS usage_count,
         CONCAT(a.first_name, ' ', a.last_name) as owner_name
       FROM referral_codes rc
       LEFT JOIN applications a ON rc.user_id = a.id

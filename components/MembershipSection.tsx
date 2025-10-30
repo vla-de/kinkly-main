@@ -28,6 +28,12 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
     }
   }, []);
 
+  const hasEliteCode = typeof window !== 'undefined' && (
+    !!sessionStorage.getItem('referralCode') ||
+    !!localStorage.getItem('referralCode') ||
+    !!sessionStorage.getItem('referralCodeId')
+  );
+
   // Fetch ticket counts from backend
   useEffect(() => {
     const fetchTicketCounts = async () => {
@@ -68,7 +74,8 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
             description={t.tier1_desc}
             features={t.tier1_features}
             onSelect={() => onTierSelect({ title: t.tier1_title, price: '€995' })}
-            ctaText={t.tier1_cta}
+            ctaText={hasEliteCode ? t.tier1_cta : 'Nur mit Elite‑Passcode'}
+            locked={!hasEliteCode}
             remainingTickets={ticketCounts.invitation_tickets}
           />
           <PricingTier 
@@ -78,7 +85,8 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
             features={t.tier2_features}
             isFeatured={true}
             onSelect={() => onTierSelect({ title: t.tier2_title, price: '€2.000' })}
-            ctaText={t.tier2_cta}
+            ctaText={hasEliteCode ? t.tier2_cta : 'Nur mit Elite‑Passcode'}
+            locked={!hasEliteCode}
             remainingTickets={ticketCounts.circle_tickets}
           />
           <PricingTier 
@@ -87,7 +95,8 @@ const MembershipSection: React.FC<MembershipSectionProps> = ({ onTierSelect }) =
             description={t.tier3_desc}
             features={t.tier3_features}
             onSelect={() => onTierSelect({ title: t.tier3_title, price: '€10.000' })}
-            ctaText={t.tier3_cta}
+            ctaText={hasEliteCode ? t.tier3_cta : 'Nur mit Elite‑Passcode'}
+            locked={!hasEliteCode}
             remainingTickets={ticketCounts.sanctum_tickets}
           />
         </div>

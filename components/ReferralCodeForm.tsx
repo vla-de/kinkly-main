@@ -76,7 +76,7 @@ const ReferralCodeForm: React.FC<ReferralCodeFormProps> = ({ onSuccess, onWaitli
 
   return (
     <div>
-      <h2 className="font-serif-display text-3xl text-white text-center mb-2">DER SCHLÜSSEL, BITTE.</h2>
+      <h2 className="font-serif-display text-3xl text-white text-center mb-2">DEN SCHLÜSSEL, BITTE.</h2>
       <p className="text-center text-gray-400 mb-6 text-sm">Geben Sie Ihren Elite Passcode ein, um fortzufahren.</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

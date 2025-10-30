@@ -448,7 +448,7 @@ const AdminPanel: React.FC = () => {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
+                  <thead className="sticky top-0 bg-gray-900 z-10">
                     <tr className="border-b border-gray-700">
                       <th className="text-left py-3 px-4">First Name</th>
                       <th className="text-left py-3 px-4">Last Name</th>
@@ -461,79 +461,81 @@ const AdminPanel: React.FC = () => {
                   </thead>
                   <tbody>
                     {users.map(user => (
-                      <tr key={user.id} className="border-b border-gray-800 hover:bg-gray-800">
-                        <td className="py-3 px-4">{user.first_name}</td>
-                        <td className="py-3 px-4">{user.last_name}</td>
-                        <td className="py-3 px-4">{user.email}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-2">
-                            <span className={`px-2 py-1 rounded text-xs ${user.is_referrer ? 'bg-green-900 text-green-200' : 'bg-gray-700 text-gray-300'}`}>
-                              {user.is_referrer ? 'Referrer' : 'User'}
-                            </span>
-                            {user.is_buyer && (
-                              <span className="px-2 py-1 rounded text-xs bg-blue-900 text-blue-200">Buyer</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">{user.codes_count ?? 0} / {user.logins_count ?? 0} / {user.sales_count ?? 0}</td>
-                        <td className="py-3 px-4">{new Date(user.created_at).toLocaleDateString()}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex space-x-1">
-                            <button 
-                              onClick={() => setEditingUser(user)}
-                              className="btn-exclusive bg-blue-600 hover:bg-blue-700 px-3 py-1 text-xs"
-                            >
-                              Edit
-                            </button>
-                            {currentUserRole === 'super_admin' && (
-                              <button 
-                                onClick={() => deleteUser(user.id)}
-                                className="btn-exclusive bg-red-600 hover:bg-red-700 px-3 py-1 text-xs"
-                              >
-                                Delete
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => createReferralCode(user.id, 10)}
-                              className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs"
-                            >
-                              Create Code
-                            </button>
-                            <button
-                              onClick={() => toggleUserExpand(user.id)}
-                              className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs"
-                            >
-                              {expandedUsers[user.id] ? 'Hide Referrals' : 'Show Referrals'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {users.map(user => expandedUsers[user.id] && (
-                      <tr key={`refs-${user.id}`} className="bg-gray-950">
-                        <td colSpan={7} className="py-3 px-4">
-                          {(userReferrals[user.id] && userReferrals[user.id].length > 0) ? (
-                            <div className="space-y-2">
-                              {userReferrals[user.id].map((ref: any) => (
-                                <div key={ref.id} className="flex items-center justify-between text-sm border border-gray-800 rounded px-3 py-2">
-                                  <div className="text-gray-300">
-                                    <span className="text-white font-medium mr-2">{ref.first_name} {ref.last_name}</span>
-                                    <span className="text-gray-400">{ref.email}</span>
-                                  </div>
-                                  <div className="text-gray-400">
-                                    <span className="mr-3">Code: <span className="text-white font-mono">{ref.code}</span></span>
-                                    <span className="mr-3">Tier: {ref.tier || '-'}</span>
-                                    <span className="mr-3">Status: {ref.status}</span>
-                                    <span>{new Date(ref.created_at).toLocaleDateString()}</span>
-                                  </div>
-                                </div>
-                              ))}
+                      <React.Fragment key={user.id}>
+                        <tr className="border-b border-gray-800 hover:bg-gray-800">
+                          <td className="py-3 px-4">{user.first_name}</td>
+                          <td className="py-3 px-4">{user.last_name}</td>
+                          <td className="py-3 px-4">{user.email}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <span className={`px-2 py-1 rounded text-xs ${user.is_referrer ? 'bg-green-900 text-green-200' : 'bg-gray-700 text-gray-300'}`}>
+                                {user.is_referrer ? 'Referrer' : 'User'}
+                              </span>
+                              {user.is_buyer && (
+                                <span className="px-2 py-1 rounded text-xs bg-blue-900 text-blue-200">Buyer</span>
+                              )}
                             </div>
-                          ) : (
-                            <div className="text-gray-500 text-sm">Keine Referrals vorhanden.</div>
-                          )}
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="py-3 px-4">{user.codes_count ?? 0} / {user.logins_count ?? 0} / {user.sales_count ?? 0}</td>
+                          <td className="py-3 px-4">{new Date(user.created_at).toLocaleDateString()}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex space-x-1">
+                              <button 
+                                onClick={() => setEditingUser(user)}
+                                className="btn-exclusive bg-blue-600 hover:bg-blue-700 px-3 py-1 text-xs"
+                              >
+                                Edit
+                              </button>
+                              {currentUserRole === 'super_admin' && (
+                                <button 
+                                  onClick={() => deleteUser(user.id)}
+                                  className="btn-exclusive bg-red-600 hover:bg-red-700 px-3 py-1 text-xs"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => createReferralCode(user.id, 10)}
+                                className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs"
+                              >
+                                Create Code
+                              </button>
+                              <button
+                                onClick={() => toggleUserExpand(user.id)}
+                                className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs"
+                              >
+                                {expandedUsers[user.id] ? 'Hide Referrals' : 'Show Referrals'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {expandedUsers[user.id] && (
+                          <tr className="bg-gray-950">
+                            <td colSpan={7} className="py-3 px-4">
+                              {(userReferrals[user.id] && userReferrals[user.id].length > 0) ? (
+                                <div className="space-y-2">
+                                  {userReferrals[user.id].map((ref: any) => (
+                                    <div key={ref.id} className="flex items-center justify-between text-sm border border-gray-800 rounded px-3 py-2">
+                                      <div className="text-gray-300">
+                                        <span className="text-white font-medium mr-2">{ref.first_name} {ref.last_name}</span>
+                                        <span className="text-gray-400">{ref.email}</span>
+                                      </div>
+                                      <div className="text-gray-400">
+                                        <span className="mr-3">Code: <span className="text-white font-mono">{ref.code}</span></span>
+                                        <span className="mr-3">Tier: {ref.tier || '-'}</span>
+                                        <span className="mr-3">Status: {ref.status}</span>
+                                        <span>{new Date(ref.created_at).toLocaleDateString()}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-gray-500 text-sm">Keine Referrals vorhanden.</div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -562,7 +564,7 @@ const AdminPanel: React.FC = () => {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
+                  <thead className="sticky top-0 bg-gray-900 z-10">
                     <tr className="border-b border-gray-700">
                       <th className="text-left py-3 px-4">Code</th>
                       <th className="text-left py-3 px-4">Owner</th>
@@ -575,100 +577,102 @@ const AdminPanel: React.FC = () => {
                   </thead>
                   <tbody>
                     {referralCodes.map(code => (
-                      <tr key={code.id} className="border-b border-gray-800 hover:bg-gray-800">
-                        <td className="py-3 px-4 font-mono">{code.code}</td>
-                        <td className="py-3 px-4">{code.owner_name || 'Unknown'}</td>
-                        <td className="py-3 px-4">{code.used_count}</td>
-                        <td className="py-3 px-4">{code.max_uses}</td>
-                        <td className="py-3 px-4">{code.expires_at ? new Date(code.expires_at).toLocaleDateString() : 'Never'}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            code.is_active ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'
-                          }`}>
-                            {code.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button 
-                            onClick={() => {
-                              const maxUses = prompt('Enter new max uses:', code.max_uses.toString());
-                              const expiresAt = prompt('Enter expiration date (YYYY-MM-DD) or leave empty:', code.expires_at ? code.expires_at.split('T')[0] : '');
-                              if (maxUses) {
-                                updateReferralCode(code.id, parseInt(maxUses), expiresAt || undefined, code.is_active);
-                              }
-                            }}
-                            className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs mr-2"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => toggleCodeUsage(code.id)}
-                            className="btn-exclusive bg-blue-700 hover:bg-blue-600 px-3 py-1 text-xs mr-2"
-                          >
-                            {expandedCodes[code.id] ? 'Hide Usage' : 'Show Usage'}
-                          </button>
-                          {code.is_active ? (
+                      <React.Fragment key={code.id}>
+                        <tr className="border-b border-gray-800 hover:bg-gray-800">
+                          <td className="py-3 px-4 font-mono">{code.code}</td>
+                          <td className="py-3 px-4">{code.owner_name || 'Unknown'}</td>
+                          <td className="py-3 px-4">{code.used_count}</td>
+                          <td className="py-3 px-4">{code.max_uses}</td>
+                          <td className="py-3 px-4">{code.expires_at ? new Date(code.expires_at).toLocaleDateString() : 'Never'}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              code.is_active ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'
+                            }`}>
+                              {code.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
                             <button 
                               onClick={() => {
-                                if (confirm('Are you sure you want to deactivate this code?')) {
-                                  deactivateReferralCode(code.id);
+                                const maxUses = prompt('Enter new max uses:', code.max_uses.toString());
+                                const expiresAt = prompt('Enter expiration date (YYYY-MM-DD) or leave empty:', code.expires_at ? code.expires_at.split('T')[0] : '');
+                                if (maxUses) {
+                                  updateReferralCode(code.id, parseInt(maxUses), expiresAt || undefined, code.is_active);
                                 }
                               }}
-                              className="btn-exclusive bg-red-700 hover:bg-red-600 px-3 py-1 text-xs"
+                              className="btn-exclusive bg-gray-700 hover:bg-gray-600 px-3 py-1 text-xs mr-2"
                             >
-                              Deactivate
+                              Edit
                             </button>
-                          ) : (
-                            <button 
-                              onClick={() => {
-                                if (confirm('Are you sure you want to reactivate this code?')) {
-                                  updateReferralCode(code.id, code.max_uses, code.expires_at, true);
-                                }
-                              }}
-                              className="btn-exclusive bg-green-700 hover:bg-green-600 px-3 py-1 text-xs"
+                            <button
+                              onClick={() => toggleCodeUsage(code.id)}
+                              className="btn-exclusive bg-blue-700 hover:bg-blue-600 px-3 py-1 text-xs mr-2"
                             >
-                              Reactivate
+                              {expandedCodes[code.id] ? 'Hide Usage' : 'Show Usage'}
                             </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {referralCodes.map(code => expandedCodes[code.id] && (
-                      <tr key={`code-usage-${code.id}`} className="bg-gray-950">
-                        <td colSpan={7} className="py-3 px-4">
-                          {codeUsages[code.id] ? (
-                            <div className="grid md:grid-cols-2 gap-4">
-                              <div>
-                                <h4 className="text-white font-medium mb-2">Applications</h4>
-                                <div className="space-y-2">
-                                  {codeUsages[code.id].applications.map((app: any) => (
-                                    <div key={app.id} className="text-sm text-gray-300 border border-gray-800 rounded px-3 py-2">
-                                      <span className="text-white font-medium mr-2">{app.first_name} {app.last_name}</span>
-                                      <span className="text-gray-400 mr-2">{app.email}</span>
-                                      <span className="mr-2">Tier: {app.tier || '-'}</span>
-                                      <span>Status: {app.status}</span>
+                            {code.is_active ? (
+                              <button 
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to deactivate this code?')) {
+                                    deactivateReferralCode(code.id);
+                                  }
+                                }}
+                                className="btn-exclusive bg-red-700 hover:bg-red-600 px-3 py-1 text-xs"
+                              >
+                                Deactivate
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to reactivate this code?')) {
+                                    updateReferralCode(code.id, code.max_uses, code.expires_at, true);
+                                  }
+                                }}
+                                className="btn-exclusive bg-green-700 hover:bg-green-600 px-3 py-1 text-xs"
+                              >
+                                Reactivate
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                        {expandedCodes[code.id] && (
+                          <tr className="bg-gray-950">
+                            <td colSpan={7} className="py-3 px-4">
+                              {codeUsages[code.id] ? (
+                                <div className="grid md:grid-cols-2 gap-4">
+                                  <div>
+                                    <h4 className="text-white font-medium mb-2">Applications</h4>
+                                    <div className="space-y-2">
+                                      {codeUsages[code.id].applications.map((app: any) => (
+                                        <div key={app.id} className="text-sm text-gray-300 border border-gray-800 rounded px-3 py-2">
+                                          <span className="text-white font-medium mr-2">{app.first_name} {app.last_name}</span>
+                                          <span className="text-gray-400 mr-2">{app.email}</span>
+                                          <span className="mr-2">Tier: {app.tier || '-'}</span>
+                                          <span>Status: {app.status}</span>
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <div>
-                                <h4 className="text-white font-medium mb-2">Usage (last 100)</h4>
-                                <div className="space-y-2">
-                                  {codeUsages[code.id].usage.map((u: any, idx: number) => (
-                                    <div key={idx} className="text-xs text-gray-400 border border-gray-800 rounded px-3 py-2">
-                                      <span className="mr-2">{new Date(u.used_at).toLocaleString()}</span>
-                                      <span className="mr-2">IP: {u.ip_address || '-'}</span>
-                                      <span className="truncate">UA: {u.user_agent?.slice(0,80) || '-'}</span>
+                                  </div>
+                                  <div>
+                                    <h4 className="text-white font-medium mb-2">Usage (last 100)</h4>
+                                    <div className="space-y-2">
+                                      {codeUsages[code.id].usage.map((u: any, idx: number) => (
+                                        <div key={idx} className="text-xs text-gray-400 border border-gray-800 rounded px-3 py-2">
+                                          <span className="mr-2">{new Date(u.used_at).toLocaleString()}</span>
+                                          <span className="mr-2">IP: {u.ip_address || '-'}</span>
+                                          <span className="truncate">UA: {u.user_agent?.slice(0,80) || '-'}</span>
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-gray-500 text-sm">Wird geladen…</div>
-                          )}
-                        </td>
-                      </tr>
+                              ) : (
+                                <div className="text-gray-500 text-sm">Wird geladen…</div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -703,7 +707,7 @@ const AdminPanel: React.FC = () => {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
+                  <thead className="sticky top-0 bg-gray-900 z-10">
                     <tr className="border-b border-gray-700">
                       <th className="text-left py-3 px-4">First Name</th>
                       <th className="text-left py-3 px-4">Last Name</th>
