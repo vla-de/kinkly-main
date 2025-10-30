@@ -1042,6 +1042,20 @@ app.get('/api/auth/verify-email', async (req, res) => {
     if (ev.verified_at) return res.status(400).send('Already verified');
     if (new Date(ev.expires_at).getTime() < Date.now()) return res.status(400).send('Token expired');
     await pool.query(`UPDATE email_verifications SET verified_at = NOW() WHERE id = $1`, [ev.id]);
+    try {
+      const subject = 'Welcome to the Circle – We will be in touch';
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">
+          <h1 style=\"color: #fff; text-align: center; margin-bottom: 30px;\">Kinkly Berlin</h1>
+          <p style=\"color:#ddd;\">Welcome to the waitlist. We will be in touch with exclusive updates and invitations.</p>
+          <p style=\"color:#aaa; font-size: 14px; margin-top: 24px;\">Willkommen im Wartekreis – wir melden uns mit Neuigkeiten und Einladungen.</p>
+        </div>
+      `;
+      const text = 'Welcome to the waitlist. We will be in touch. / Willkommen im Wartekreis – wir melden uns.';
+      await sendEmail(ev.email, subject, html, text, `Kinkly Berlin <${EMAIL_ADDRESSES.WAITLIST}>`);
+    } catch (e) {
+      console.error('post-verify welcome email error:', e);
+    }
     res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app');
   } catch (e) {
     console.error('verify-email error:', e);
@@ -1750,19 +1764,25 @@ app.post('/api/waitlist', limitWaitlistIp, formGuards(), async (req, res) => {
     
     console.log('Waitlist entry created/updated:', result.rows[0]);
     
-    // Send welcome email to waitlist member
+    // Send double opt-in verification email instead of invitation
     try {
-      const emailResult = await sendEventInviteEmail(
-        email, 
-        firstName || 'Friend', 
-        lastName || '', 
-        referralCode, 
-        "Thank you for joining our waitlist. We'll be in touch soon with exclusive updates about our upcoming events."
+      const token = crypto.randomBytes(24).toString('base64url');
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+      await pool.query(
+        `INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)`,
+        [email, token, expiresAt]
       );
-      console.log('Waitlist welcome email result:', emailResult);
+      const verifyUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/verify-email?token=${token}&redirect=${encodeURIComponent('https://kinkly-main.vercel.app/event')}`;
+      await sendEmail(
+        email,
+        'Please confirm your email address',
+        `<p>Confirm your email to join the circle: <a href="${verifyUrl}">Verify</a> (valid 24h)</p>`,
+        `Verify: ${verifyUrl} (valid 24h)`,
+        `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`
+      );
     } catch (emailError) {
-      console.error('Failed to send waitlist welcome email:', emailError);
-      // Don't fail the request if email fails
+      console.error('Failed to send verification email:', emailError);
+      // Do not fail the request if email fails
     }
     
     res.json({ 
