@@ -11,7 +11,7 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const stripePromise = loadStripe('pk_test_D0yGFsSbMLDTGbr3nhQshR7400Xrp59x45');
-const API_BASE_URL = 'https://kinkly-backend.onrender.com';
+const API_BASE_URL = '';
 
 interface OnApproveData {
   orderID: string;

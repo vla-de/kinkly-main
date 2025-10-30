@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const API_BASE = 'https://kinkly-backend.onrender.com';
+const API_BASE = '';
 
 const ProfilePanel: React.FC = () => {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);

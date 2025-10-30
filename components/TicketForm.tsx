@@ -19,7 +19,7 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
   const [elitePasscode, setElitePasscode] = useState<string>('');
   const [codeInput, setCodeInput] = useState<string>('');
   const [showCodeInput, setShowCodeInput] = useState<boolean>(false);
-  const API_BASE_URL = 'https://kinkly-backend.onrender.com';
+  const API_BASE_URL = '';
 
   // Load form data and elite passcode on component mount
   useEffect(() => {
@@ -141,7 +141,7 @@ const TicketForm: React.FC<TicketFormProps> = ({ onSubmitSuccess, selectedTier }
     console.log('Submitting data:', data); // Debug log
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/applications`, {
+      const response = await fetch(`/api/applications`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

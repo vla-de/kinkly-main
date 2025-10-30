@@ -33,6 +33,27 @@ const EMAIL_ADDRESSES = {
 // Default sender (for system emails like verification, magic links)
 const EMAIL_FROM = process.env.EMAIL_FROM || `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`;
 
+// Signed admin action tokens (used in internal emails)
+function createActionToken(payload, ttlMs = 60 * 60 * 1000) {
+  const data = { ...payload, exp: Date.now() + ttlMs };
+  const json = JSON.stringify(data);
+  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(json).digest('base64url');
+  return Buffer.from(json).toString('base64url') + '.' + sig;
+}
+function verifyActionToken(token) {
+  try {
+    const [b64, sig] = String(token || '').split('.');
+    const json = Buffer.from(b64, 'base64url').toString('utf8');
+    const expected = crypto.createHmac('sha256', SESSION_SECRET).update(json).digest('base64url');
+    if (sig !== expected) return null;
+    const data = JSON.parse(json);
+    if (!data.exp || Date.now() > data.exp) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 // --- Lightweight in-memory rate limiter ---
 const rateLimitBuckets = new Map();
 function createRateLimiter(options) {
@@ -211,8 +232,8 @@ const sendEventInviteEmail = async (email, firstName, lastName, referralCode, cu
   console.log('Sending event invite email to:', { email, firstName, lastName, referralCode, customMessage });
   
   const eventUrl = referralCode 
-    ? `https://kinkly-main.vercel.app/event?elitePasscode=${referralCode}`
-    : 'https://kinkly-main.vercel.app/event';
+    ? `https://www.kingcli.eu/event?elitePasscode=${referralCode}`
+    : 'https://www.kingcli.eu/event';
   
   const subject = 'Your Invitation to Kinkly Berlin';
   const html = `
@@ -673,11 +694,8 @@ const paypalClient = new paypal.core.PayPalHttpClient(
 // 3. Middleware
 // CORS: allow frontend origins and cookies
 const FRONTEND_ORIGINS = [
-  'https://kinkly-main.vercel.app',
-  'https://kinkly-preloader.vercel.app',
-  'https://kinkly.eu',
-  'https://www.kinkly.eu',
-  'https://send.kinkly.eu',
+  'https://www.kingcli.eu',
+  'https://kingcli.eu',
   'http://localhost:5173',
   'http://127.0.0.1:5173'
 ];
@@ -899,6 +917,33 @@ app.put('/api/admin/purchases/:id/approve', authenticateAdmin, async (req, res) 
   }
 });
 
+// Admin action via signed link: issue code and send invite to email
+app.get('/api/admin/actions/issue-code', async (req, res) => {
+  const { token } = req.query;
+  const data = verifyActionToken(token);
+  if (!data || data.action !== 'issue_code' || !data.email) {
+    return res.status(400).json({ error: 'Invalid or expired token' });
+  }
+  try {
+    // Lookup name from waitlist if available
+    const w = await pool.query(`SELECT first_name, last_name FROM waitlist WHERE email=$1 ORDER BY id DESC LIMIT 1`, [data.email]);
+    const firstName = w.rows[0]?.first_name || '';
+    const lastName = w.rows[0]?.last_name || '';
+    // Generate a new referral code (unowned)
+    const code = generateReferralCode();
+    await pool.query(
+      `INSERT INTO referral_codes (code, user_id, max_uses, is_active) VALUES ($1, NULL, $2, true)`,
+      [code, 1] // single-use by default
+    );
+    // Send invite email to the user with the new code
+    await sendEventInviteEmail(data.email, firstName, lastName, code, null);
+    res.json({ success: true, email: data.email, code });
+  } catch (e) {
+    console.error('issue-code error:', e);
+    res.status(500).json({ error: 'Failed to issue code' });
+  }
+});
+
 // --- Auth: Magic link flow ---
 app.post('/api/auth/request-magic-link', limitMagicLinkIp, requireTurnstile('magic_link'), formGuards(), async (req, res) => {
   const { email, redirectUrl } = req.body || {};
@@ -921,7 +966,7 @@ app.post('/api/auth/request-magic-link', limitMagicLinkIp, requireTurnstile('mag
     );
 
     const loginUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/magic-login?token=${token}&redirect=${encodeURIComponent(
-      redirectUrl || 'https://kinkly-main.vercel.app'
+      redirectUrl || 'https://www.kingcli.eu'
     )}`;
 
     await sendEmail(
@@ -941,19 +986,19 @@ app.post('/api/auth/request-magic-link', limitMagicLinkIp, requireTurnstile('mag
 app.get('/api/auth/magic-login', async (req, res) => {
   const { token, redirect } = req.query;
   if (!token) {
-    return res.redirect('https://kinkly-main.vercel.app/event?error=missing_token');
+    return res.redirect('https://www.kingcli.eu/event?error=missing_token');
   }
   try {
     const r = await pool.query(`SELECT * FROM magic_links WHERE token = $1`, [token]);
     if (r.rows.length === 0) {
-      return res.redirect('https://kinkly-main.vercel.app/event?error=invalid_token');
+      return res.redirect('https://www.kingcli.eu/event?error=invalid_token');
     }
     const ml = r.rows[0];
     if (ml.used_at) {
-      return res.redirect('https://kinkly-main.vercel.app/event?error=token_used');
+      return res.redirect('https://www.kingcli.eu/event?error=token_used');
     }
     if (new Date(ml.expires_at).getTime() < Date.now()) {
-      return res.redirect('https://kinkly-main.vercel.app/event?error=token_expired');
+      return res.redirect('https://www.kingcli.eu/event?error=token_expired');
     }
 
     // Ensure user exists
@@ -970,10 +1015,10 @@ app.get('/api/auth/magic-login', async (req, res) => {
 
     // Set session cookie
     setSessionCookie(res, { uid: user.id, role: user.role, exp: Date.now() + 1000 * 60 * 60 * 24 * 7 });
-    res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app/event');
+    res.redirect((redirect && typeof redirect === 'string') ? redirect : 'https://www.kingcli.eu/event');
   } catch (e) {
     console.error('magic-login error:', e);
-    res.redirect('https://kinkly-main.vercel.app/event?error=login_failed');
+    res.redirect('https://www.kingcli.eu/event?error=login_failed');
   }
 });
 
@@ -1198,7 +1243,7 @@ app.post('/api/auth/request-email-verification', limitEmailVerifyIp, formGuards(
       [email, token, expiresAt]
     );
     const verifyUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/verify-email?token=${token}&redirect=${encodeURIComponent(
-      redirectUrl || 'https://kinkly-main.vercel.app'
+      redirectUrl || 'https://www.kingcli.eu'
     )}`;
     await sendEmail(
       email,
@@ -1235,11 +1280,25 @@ app.get('/api/auth/verify-email', async (req, res) => {
       `;
       const text = 'Welcome to the waitlist. We will be in touch. / Willkommen im Wartekreis – wir melden uns.';
       await sendEmail(ev.email, subject, html, text, `Kinkly Berlin <${EMAIL_ADDRESSES.WAITLIST}>`);
+      // Internal notification: verified
+      const actionToken = createActionToken({ action: 'issue_code', email: ev.email });
+      const issueUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/admin/actions/issue-code?token=${encodeURIComponent(actionToken)}`;
+      await sendEmail(
+        EMAIL_ADDRESSES.WAITLIST,
+        `Waitlist verified: <${ev.email}>`,
+        `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#000;color:#fff;padding:20px;">
+          <h2 style="margin:0 0 10px;">Waitlist email verified</h2>
+          <p>Email: ${ev.email}</p>
+          <p><a href="${issueUrl}" style="background:#fff;color:#000;padding:10px 14px;border-radius:6px;text-decoration:none;">Generate & send Elite Code</a></p>
+        </div>`,
+        `Waitlist verified: <${ev.email}>\nIssue code: ${issueUrl}`,
+        `Kinkly Berlin <${EMAIL_ADDRESSES.WAITLIST}>`
+      );
     } catch (e) {
       console.error('post-verify welcome email error:', e);
     }
     // Append verified=1 to help frontend clear soft-gate state
-    const target = (redirect && typeof redirect === 'string') ? redirect : 'https://kinkly-main.vercel.app';
+    const target = (redirect && typeof redirect === 'string') ? redirect : 'https://www.kingcli.eu';
     const url = new URL(target);
     url.searchParams.set('verified', '1');
     res.redirect(url.toString());
@@ -2143,7 +2202,7 @@ app.post('/api/waitlist', limitWaitlistIp, formGuards(), async (req, res) => {
         `INSERT INTO email_verifications (email, token, expires_at) VALUES ($1, $2, $3)`,
         [email, token, expiresAt]
       );
-      const verifyUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/verify-email?token=${token}&redirect=${encodeURIComponent('https://kinkly-main.vercel.app')}`;
+      const verifyUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/verify-email?token=${token}&redirect=${encodeURIComponent('https://www.kingcli.eu')}`;
       // Send from noreply@ and BCC waitlist@
       await sendEmailWithBCC(
         email,
@@ -2152,6 +2211,21 @@ app.post('/api/waitlist', limitWaitlistIp, formGuards(), async (req, res) => {
         `Verify: ${verifyUrl} (valid 24h)`,
         `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`,
         [EMAIL_ADDRESSES.WAITLIST]
+      );
+      // Internal notification (no verify link)
+      const actionToken = createActionToken({ action: 'issue_code', email });
+      const issueUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/admin/actions/issue-code?token=${encodeURIComponent(actionToken)}`;
+      await sendEmail(
+        EMAIL_ADDRESSES.WAITLIST,
+        `Waitlist signup: ${firstName || ''} ${lastName || ''} <${email}>`,
+        `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#000;color:#fff;padding:20px;">
+          <h2 style="margin:0 0 10px;">New waitlist signup</h2>
+          <p>Name: ${(firstName||'').toString()} ${(lastName||'').toString()}</p>
+          <p>Email: ${email}</p>
+          <p><a href="${issueUrl}" style="background:#fff;color:#000;padding:10px 14px;border-radius:6px;text-decoration:none;">Generate & send Elite Code</a></p>
+        </div>`,
+        `New waitlist signup: ${firstName||''} ${lastName||''} <${email}>\nIssue code: ${issueUrl}`,
+        `Kinkly Berlin <${EMAIL_ADDRESSES.WAITLIST}>`
       );
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
