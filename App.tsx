@@ -123,6 +123,11 @@ const App: React.FC = () => {
         // After login via magic link, focus member dashboard
         const params = new URLSearchParams(window.location.search);
         if (ok && params.get('member') === '1') {
+          // Clear any leftover soft-gate state; member logins are verified
+          try {
+            localStorage.removeItem('kinklyVerificationPending');
+          } catch {}
+          setVerificationPending(false);
           setTimeout(() => {
             const el = document.getElementById('profile-panel');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -185,7 +190,7 @@ const App: React.FC = () => {
   return (
     <div className="bg-black min-h-screen text-gray-300 font-sans antialiased relative">
       {/* Email Verification Soft-Gate Banner (sticky with subtle yellow + blur). Add spacer below to avoid overlap. */}
-      {verificationPending && (
+      {verificationPending && !isAuthenticated && (
         <>
           <div className="fixed left-0 right-0 top-0 z-40">
             <div className="mx-auto max-w-[720px] px-3 md:px-4 pt-3">
