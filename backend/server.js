@@ -2023,13 +2023,13 @@ app.get('/api/events/status', async (req, res) => {
 // Update remaining tickets when payment is successful
 const updateRemainingTickets = async (tier) => {
   try {
-    let column = 'invitation_tickets'; // default for 'The Invitation'
-    
-    if (tier === 'The Circle') {
-      column = 'circle_tickets';
-    } else if (tier === 'The Inner Sanctum') {
+    let column = 'invitation_tickets'; // default
+    const t = (tier || '').toLowerCase();
+    if (t.includes('sanctum') || t.includes('inner')) {
       column = 'sanctum_tickets';
-    } else if (tier === 'The Invitation') {
+    } else if (t.includes('circle') || t.includes('kreis')) {
+      column = 'circle_tickets';
+    } else if (t.includes('invitation') || t.includes('einladung')) {
       column = 'invitation_tickets';
     }
     
