@@ -491,6 +491,54 @@ const initializeDb = async () => {
         console.log('Event settings table created successfully');
       }
     }
+
+    // Create email_templates table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS email_templates (
+        template_key VARCHAR(50) PRIMARY KEY,
+        subject TEXT NOT NULL,
+        html TEXT NOT NULL,
+        text_body TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Seed defaults if missing
+    const defaults = [
+      {
+        key: 'waitlist_verify',
+        subject: 'Please confirm your email address',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p style="color:#ddd;">Hello {{firstName}} {{lastName}},</p>\n  <p style="color:#ddd;">Confirm your email to join the circle: <a href="{{verifyUrl}}">Verify</a> (valid 24h)</p>\n  <p style="color:#aaa; font-size: 12px; margin-top: 24px;">If you didn\'t request this, you can safely ignore this email.</p>\n</div>',
+        text: 'Hello {{firstName}} {{lastName}},\nVerify: {{verifyUrl}} (valid 24h)'
+      },
+      {
+        key: 'post_verify_welcome',
+        subject: 'Welcome to the Circle – We will be in touch',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p style="color:#ddd;">Welcome to the waitlist, {{firstName}}. We will be in touch with exclusive updates and invitations.</p>\n  <p style="color:#aaa; font-size: 14px; margin-top: 24px;">Willkommen im Wartekreis – wir melden uns mit Neuigkeiten und Einladungen.</p>\n</div>',
+        text: 'Welcome to the waitlist. We will be in touch. / Willkommen im Wartekreis – wir melden uns.'
+      },
+      {
+        key: 'invite',
+        subject: 'Your Invitation to Kinkly Berlin',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p>Dear {{firstName}} {{lastName}},</p>\n  <p>You have been invited to join our exclusive event. The invitation awaits you.</p>\n  {{#if customMessage}}<div style="background-color:#111; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 3px solid #fff;">\n    <p style="margin:0; font-style: italic;">"{{customMessage}}"</p>\n  </div>{{/if}}\n  <div style="text-align:center; margin: 30px 0;">\n    <a href="{{eventUrl}}" style="background-color:#fff; color:#000; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Enter the Event</a>\n  </div>\n  <p style="color:#ccc; font-size: 14px; text-align:center; margin-top: 30px;">This is an exclusive invitation. Please do not share this link.</p>\n</div>',
+        text: 'Dear {{firstName}} {{lastName}},\nYou have been invited. Enter: {{eventUrl}}'
+      },
+      {
+        key: 'magic_link',
+        subject: 'Your secure login link',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p>Click to login: <a href="{{loginUrl}}">Login</a> (valid 15 minutes)</p>\n</div>',
+        text: 'Login: {{loginUrl}} (valid 15 minutes)'
+      }
+    ];
+
+    for (const d of defaults) {
+      await pool.query(
+        `INSERT INTO email_templates (template_key, subject, html, text_body)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (template_key) DO NOTHING`,
+        [d.key, d.subject, d.html, d.text]
+      );
+    }
     // Create or migrate waitlist table
     const waitlistCheck = await pool.query(`
       SELECT column_name FROM information_schema.columns 
@@ -1489,6 +1537,35 @@ app.post('/api/admin/referral-codes', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error creating referral code:', error);
     res.status(500).json({ error: 'Failed to create referral code' });
+  }
+});
+
+// Admin: list email templates
+app.get('/api/admin/email-templates', authenticateAdmin, async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT template_key, subject, html, text_body, updated_at FROM email_templates ORDER BY template_key`);
+    res.json(r.rows);
+  } catch (e) {
+    console.error('email-templates list error:', e);
+    res.status(500).json({ error: 'Failed to fetch templates' });
+  }
+});
+
+// Admin: update single template
+app.put('/api/admin/email-templates/:key', authenticateAdmin, async (req, res) => {
+  const { key } = req.params;
+  const { subject, html, text_body } = req.body || {};
+  if (!subject || !html || !text_body) return res.status(400).json({ error: 'subject, html, text_body required' });
+  try {
+    const r = await pool.query(
+      `UPDATE email_templates SET subject=$1, html=$2, text_body=$3, updated_at=NOW() WHERE template_key=$4 RETURNING template_key, subject, html, text_body, updated_at`,
+      [subject, html, text_body, key]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Template not found' });
+    res.json(r.rows[0]);
+  } catch (e) {
+    console.error('email-templates update error:', e);
+    res.status(500).json({ error: 'Failed to update template' });
   }
 });
 

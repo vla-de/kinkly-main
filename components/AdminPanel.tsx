@@ -41,7 +41,9 @@ interface EventStats {
 
 const AdminPanel: React.FC = () => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'users' | 'referrals' | 'waitlist' | 'analytics' | 'scarcity'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'referrals' | 'waitlist' | 'analytics' | 'scarcity' | 'emails'>('users');
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  const [savingTemplateKey, setSavingTemplateKey] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
   const [waitlist, setWaitlist] = useState<any[]>([]);
@@ -341,7 +343,8 @@ const AdminPanel: React.FC = () => {
             { key: 'referrals', label: 'Elite Passcodes' },
             { key: 'waitlist', label: 'Waitlist' },
             { key: 'analytics', label: 'Analytics' },
-            { key: 'scarcity', label: 'Scarcity Management' }
+            { key: 'scarcity', label: 'Scarcity Management' },
+            { key: 'emails', label: 'Emails' }
           ].map(tab => (
             <button
               key={tab.key}
@@ -660,6 +663,47 @@ const AdminPanel: React.FC = () => {
                   <h3 className="text-sm text-gray-400 mb-2">Total Revenue</h3>
                   <p className="text-3xl font-bold text-white">€{stats.total_revenue}</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Emails Tab */}
+          {activeTab === 'emails' && !loading && (
+            <div>
+              <h2 className="font-serif-display text-2xl text-white mb-6">Email Templates</h2>
+              <p className="text-sm text-gray-400 mb-6">Placeholders: {'{{firstName}}'}, {'{{lastName}}'}, {'{{verifyUrl}}'}, {'{{eventUrl}}'}, {'{{loginUrl}}'}, {'{{customMessage}}'}.</p>
+              <div className="space-y-6">
+                {emailTemplates.map((tpl) => (
+                  <div key={tpl.template_key} className="border border-gray-700 rounded p-4 bg-gray-900">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-white font-semibold">{tpl.template_key}</h4>
+                      <button
+                        disabled={savingTemplateKey===tpl.template_key}
+                        onClick={async () => {
+                          try {
+                            setSavingTemplateKey(tpl.template_key);
+                            const token = localStorage.getItem('adminToken');
+                            const res = await fetch(`/api/admin/email-templates/${tpl.template_key}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                              body: JSON.stringify({ subject: tpl.subject, html: tpl.html, text_body: tpl.text_body })
+                            });
+                            if (!res.ok) alert('Failed to save');
+                          } finally {
+                            setSavingTemplateKey(null);
+                          }
+                        }}
+                        className="bg-white text-black text-xs px-3 py-1 rounded"
+                      >{savingTemplateKey===tpl.template_key?'Saving…':'Save'}</button>
+                    </div>
+                    <label className="block text-xs text-gray-400 mb-1">Subject</label>
+                    <input value={tpl.subject} onChange={(e)=>setEmailTemplates(prev=>prev.map(p=>p.template_key===tpl.template_key?{...p, subject:e.target.value}:p))} className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white mb-3"/>
+                    <label className="block text-xs text-gray-400 mb-1">HTML</label>
+                    <textarea value={tpl.html} onChange={(e)=>setEmailTemplates(prev=>prev.map(p=>p.template_key===tpl.template_key?{...p, html:e.target.value}:p))} className="w-full h-40 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white mb-3"></textarea>
+                    <label className="block text-xs text-gray-400 mb-1">Text</label>
+                    <textarea value={tpl.text_body} onChange={(e)=>setEmailTemplates(prev=>prev.map(p=>p.template_key===tpl.template_key?{...p, text_body:e.target.value}:p))} className="w-full h-24 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white"></textarea>
+                  </div>
+                ))}
               </div>
             </div>
           )}
