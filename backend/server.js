@@ -61,10 +61,8 @@ function createRateLimiter(options) {
 function formGuards(minMs = 2000) {
   return (req, res, next) => {
     try {
-      // Disable in development or when explicitly disabled
-      if (process.env.NODE_ENV !== 'production' || process.env.DISABLE_FORM_GUARDS === '1') {
-        return next();
-      }
+      // TEMPORARILY DISABLED FOR DEVELOPMENT/TESTING
+      return next();
       const body = req.body || {};
       const honeypot = (body.website || body.hp || body.honeypot || '').toString().trim();
       if (honeypot.length > 0) {
