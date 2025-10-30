@@ -605,6 +605,9 @@ const paypalClient = new paypal.core.PayPalHttpClient(
 const FRONTEND_ORIGINS = [
   'https://kinkly-main.vercel.app',
   'https://kinkly-preloader.vercel.app',
+  'https://kinkly.eu',
+  'https://www.kinkly.eu',
+  'https://send.kinkly.eu',
   'http://localhost:5173',
   'http://127.0.0.1:5173'
 ];
