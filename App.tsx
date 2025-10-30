@@ -32,6 +32,7 @@ const App: React.FC = () => {
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
   const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [showMemberWelcome, setShowMemberWelcome] = useState<boolean>(false);
 
   const handleOpenLogin = () => setActiveModal('login');
   const handleCloseModal = () => setActiveModal(null);
@@ -122,12 +123,16 @@ const App: React.FC = () => {
         setIsAuthenticated(ok);
         // After login via magic link, focus member dashboard
         const params = new URLSearchParams(window.location.search);
-        if (ok && params.get('member') === '1') {
+        if (params.get('member') === '1') {
           // Clear any leftover soft-gate state; member logins are verified
           try {
             localStorage.removeItem('kinklyVerificationPending');
           } catch {}
           setVerificationPending(false);
+          if (!ok) {
+            setShowMemberWelcome(true);
+            setTimeout(() => setShowMemberWelcome(false), 5000);
+          }
           setTimeout(() => {
             const el = document.getElementById('profile-panel');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -189,8 +194,17 @@ const App: React.FC = () => {
 
   return (
     <div className="bg-black min-h-screen text-gray-300 font-sans antialiased relative">
+      {showMemberWelcome && (
+        <div className="pt-3 px-3 md:px-4">
+          <div className="mx-auto max-w-[720px]">
+            <div className="bg-emerald-900/15 border border-emerald-500/25 text-emerald-200 px-3 py-2 md:px-4 md:py-2 rounded-md">
+              <div className="text-[11px] md:text-sm">Erfolgreich angemeldet. Willkommen zurück.</div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Email Verification Soft-Gate Banner (sticky with subtle yellow + blur). Add spacer below to avoid overlap. */}
-      {verificationPending && !isAuthenticated && (
+      {verificationPending && !isAuthenticated && !showMemberWelcome && (
         <>
           <div className="fixed left-0 right-0 top-0 z-40">
             <div className="mx-auto max-w-[720px] px-3 md:px-4 pt-3">
