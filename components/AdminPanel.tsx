@@ -671,7 +671,17 @@ const AdminPanel: React.FC = () => {
           {activeTab === 'emails' && !loading && (
             <div>
               <h2 className="font-serif-display text-2xl text-white mb-6">Email Templates</h2>
-              <p className="text-sm text-gray-400 mb-6">Placeholders: {'{{firstName}}'}, {'{{lastName}}'}, {'{{verifyUrl}}'}, {'{{eventUrl}}'}, {'{{loginUrl}}'}, {'{{customMessage}}'}.</p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-gray-400">Placeholders: {'{{firstName}}'}, {'{{lastName}}'}, {'{{verifyUrl}}'}, {'{{eventUrl}}'}, {'{{loginUrl}}'}, {'{{customMessage}}'}.</p>
+                <button
+                  onClick={async ()=>{
+                    const token = localStorage.getItem('adminToken');
+                    await fetch('/api/admin/email-templates/seed', { method:'POST', headers:{ 'Authorization':`Bearer ${token}` } });
+                    await fetchData();
+                  }}
+                  className="btn-exclusive bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 text-sm"
+                >Load Defaults</button>
+              </div>
               <div className="space-y-6">
                 {emailTemplates.map((tpl) => (
                   <div key={tpl.template_key} className="border border-gray-700 rounded p-4 bg-gray-900">

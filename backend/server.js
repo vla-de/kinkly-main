@@ -1569,6 +1569,50 @@ app.put('/api/admin/email-templates/:key', authenticateAdmin, async (req, res) =
   }
 });
 
+// Admin: seed defaults (idempotent)
+app.post('/api/admin/email-templates/seed', authenticateAdmin, async (req, res) => {
+  try {
+    const defaults = [
+      {
+        key: 'waitlist_verify',
+        subject: 'Please confirm your email address',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p style="color:#ddd;">Hello {{firstName}} {{lastName}},</p>\n  <p style="color:#ddd;">Confirm your email to join the circle: <a href="{{verifyUrl}}">Verify</a> (valid 24h)</p>\n  <p style="color:#aaa; font-size: 12px; margin-top: 24px;">If you didn\'t request this, you can safely ignore this email.</p>\n</div>',
+        text: 'Hello {{firstName}} {{lastName}},\nVerify: {{verifyUrl}} (valid 24h)'
+      },
+      {
+        key: 'post_verify_welcome',
+        subject: 'Welcome to the Circle – We will be in touch',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p style="color:#ddd;">Welcome to the waitlist, {{firstName}}. We will be in touch with exclusive updates and invitations.</p>\n  <p style="color:#aaa; font-size: 14px; margin-top: 24px;">Willkommen im Wartekreis – wir melden uns mit Neuigkeiten und Einladungen.</p>\n</div>',
+        text: 'Welcome to the waitlist. We will be in touch. / Willkommen im Wartekreis – wir melden uns.'
+      },
+      {
+        key: 'invite',
+        subject: 'Your Invitation to Kinkly Berlin',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p>Dear {{firstName}} {{lastName}},</p>\n  <p>You have been invited to join our exclusive event. The invitation awaits you.</p>\n  {{#if customMessage}}<div style="background-color:#111; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 3px solid #fff;">\n    <p style="margin:0; font-style: italic;">"{{customMessage}}"</p>\n  </div>{{/if}}\n  <div style="text-align:center; margin: 30px 0;">\n    <a href="{{eventUrl}}" style="background-color:#fff; color:#000; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Enter the Event</a>\n  </div>\n  <p style="color:#ccc; font-size: 14px; text-align:center; margin-top: 30px;">This is an exclusive invitation. Please do not share this link.</p>\n</div>',
+        text: 'Dear {{firstName}} {{lastName}},\nYou have been invited. Enter: {{eventUrl}}'
+      },
+      {
+        key: 'magic_link',
+        subject: 'Your secure login link',
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p>Click to login: <a href="{{loginUrl}}">Login</a> (valid 15 minutes)</p>\n</div>',
+        text: 'Login: {{loginUrl}} (valid 15 minutes)'
+      }
+    ];
+    for (const d of defaults) {
+      await pool.query(
+        `INSERT INTO email_templates (template_key, subject, html, text_body)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (template_key) DO UPDATE SET subject=EXCLUDED.subject, html=EXCLUDED.html, text_body=EXCLUDED.text_body, updated_at=NOW()`,
+        [d.key, d.subject, d.html, d.text]
+      );
+    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error('email-templates seed error:', e);
+    res.status(500).json({ error: 'Failed to seed templates' });
+  }
+});
+
 // Update referral code
 app.put('/api/admin/referral-codes/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
