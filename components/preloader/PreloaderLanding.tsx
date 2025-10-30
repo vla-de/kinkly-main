@@ -34,6 +34,7 @@ const PreloaderLanding: React.FC = () => {
   const [waitlistLastName, setWaitlistLastName] = useState('');
   const [waitlistConsent, setWaitlistConsent] = useState<boolean>(false);
   const [waitlistSubmitted, setWaitlistSubmitted] = useState<boolean>(false);
+  const [showVerifiedBanner, setShowVerifiedBanner] = useState<boolean>(false);
 
   const SCROLL_TRIGGER_DISTANCE = 50;
 
@@ -41,12 +42,21 @@ const PreloaderLanding: React.FC = () => {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const codeFromUrl = urlParams.get('elitePasscode');
+    const verified = urlParams.get('verified');
     if (codeFromUrl) {
       setElitePasscode(codeFromUrl.toUpperCase());
       // Auto-validate the code from URL
       setTimeout(() => {
         validateCodeFromUrl(codeFromUrl.toUpperCase());
       }, 1000);
+    }
+    if (verified === '1') {
+      setShowVerifiedBanner(true);
+      // Clean up URL
+      const newUrl = window.location.pathname + window.location.search.replace(/([?&])verified=1(&|$)/, (m, p1, p2) => p1 === '?' && !p2 ? '' : p1 === '?' ? '?' : p2 ? p1 : '');
+      window.history.replaceState({}, '', newUrl || window.location.pathname);
+      // Auto hide
+      setTimeout(() => setShowVerifiedBanner(false), 5000);
     }
   }, []);
 
@@ -325,6 +335,16 @@ const PreloaderLanding: React.FC = () => {
 
   return (
     <main className="bg-black min-h-screen text-gray-300 relative overflow-x-hidden">
+      {showVerifiedBanner && (
+        <div className="fixed left-0 right-0 top-0 z-40 mt-14 pointer-events-none">
+          <div className="mx-auto max-w-[640px] px-3">
+            <div className="pointer-events-auto bg-emerald-900/20 backdrop-blur border border-emerald-500/30 text-emerald-200 px-3 py-2 md:px-4 md:py-2 text-[11px] md:text-sm rounded-md shadow-[0_0_30px_rgba(50,220,150,0.06)] flex items-center justify-between gap-2">
+              <span>{language==='en' ? 'Email verified. Welcome to the waitlist.' : 'E‑Mail bestätigt. Willkommen im Wartekreis.'}</span>
+              <button onClick={() => setShowVerifiedBanner(false)} className="text-emerald-300 hover:text-emerald-100">✕</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Language Toggle - always visible */}
       <div className="fixed top-4 left-4 z-50">
         <button
