@@ -84,6 +84,19 @@ const AdminPanel: React.FC = () => {
           const usersData = await usersResponse.json();
           setUsers(usersData);
           break;
+        case 'emails':
+          try {
+            const tplRes = await fetch('/api/admin/email-templates', { headers });
+            if (tplRes.ok) {
+              const tplData = await tplRes.json();
+              setEmailTemplates(tplData);
+            } else {
+              setEmailTemplates([]);
+            }
+          } catch {
+            setEmailTemplates([]);
+          }
+          break;
         case 'referrals':
           const referralsResponse = await fetch('/api/admin/referral-codes', { headers });
           const referralsData = await referralsResponse.json();

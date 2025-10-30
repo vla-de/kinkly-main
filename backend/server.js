@@ -159,13 +159,13 @@ const sendEmail = async (to, subject, html, text, from = EMAIL_FROM) => {
   }
 };
 
-// Send email with CC to waitlist@kinkly.eu
-const sendEmailWithCC = async (to, subject, html, text, from = EMAIL_FROM) => {
+// Send email with CC
+const sendEmailWithCC = async (to, subject, html, text, from = EMAIL_FROM, cc = []) => {
   try {
     const { data, error } = await resend.emails.send({
       from: from,
       to: [to],
-      cc: [EMAIL_ADDRESSES.WAITLIST],
+      cc: cc,
       subject: subject,
       html: html,
       text: text
@@ -180,6 +180,29 @@ const sendEmailWithCC = async (to, subject, html, text, from = EMAIL_FROM) => {
     return { success: true, data };
   } catch (error) {
     console.error('Error sending email with CC:', error);
+    return { success: false, error };
+  }
+};
+
+// Send email with BCC
+const sendEmailWithBCC = async (to, subject, html, text, from = EMAIL_FROM, bcc = []) => {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: from,
+      to: [to],
+      bcc: bcc,
+      subject: subject,
+      html: html,
+      text: text
+    });
+    if (error) {
+      console.error('Error sending email with BCC:', error);
+      return { success: false, error };
+    }
+    console.log('Email sent successfully with BCC:', data);
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error sending email with BCC:', error);
     return { success: false, error };
   }
 };
@@ -233,7 +256,8 @@ const sendEventInviteEmail = async (email, firstName, lastName, referralCode, cu
     ? `Kinkly Berlin <${EMAIL_ADDRESSES.CIRCLE}>`
     : `Kinkly Berlin <${EMAIL_ADDRESSES.WAITLIST}>`;
   
-  const result = await sendEmailWithCC(email, subject, html, text, fromAddress);
+  // CC waitlist on invites
+  const result = await sendEmailWithCC(email, subject, html, text, fromAddress, [EMAIL_ADDRESSES.WAITLIST]);
   console.log('Email send result:', result);
   return result;
 };
@@ -276,7 +300,15 @@ const sendConfirmationEmail = async (fullName, email, tier) => {
     Thank you for joining Kinkly Berlin.
   `;
   
-  return await sendEmail(email, subject, html, text);
+  // Send purchase confirmation from circle@ to customer and BCC circle@
+  return await sendEmailWithBCC(
+    email,
+    subject,
+    html,
+    text,
+    `Kinkly Berlin <${EMAIL_ADDRESSES.CIRCLE}>`,
+    [EMAIL_ADDRESSES.CIRCLE]
+  );
 };
 
 
@@ -2031,12 +2063,14 @@ app.post('/api/waitlist', limitWaitlistIp, formGuards(), async (req, res) => {
         [email, token, expiresAt]
       );
       const verifyUrl = `${process.env.BACKEND_BASE_URL || 'https://kinkly-backend.onrender.com'}/api/auth/verify-email?token=${token}&redirect=${encodeURIComponent('https://kinkly-main.vercel.app')}`;
-      await sendEmail(
+      // Send from noreply@ and BCC waitlist@
+      await sendEmailWithBCC(
         email,
         'Please confirm your email address',
         `<p>Confirm your email to join the circle: <a href="${verifyUrl}">Verify</a> (valid 24h)</p>`,
         `Verify: ${verifyUrl} (valid 24h)`,
-        `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`
+        `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`,
+        [EMAIL_ADDRESSES.WAITLIST]
       );
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
