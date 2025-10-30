@@ -601,7 +601,29 @@ const paypalClient = new paypal.core.PayPalHttpClient(
 );
 
 // 3. Middleware
-app.use(cors({ origin: '*' }));
+// CORS: allow frontend origins and cookies
+const FRONTEND_ORIGINS = [
+  'https://kinkly-main.vercel.app',
+  'https://kinkly-preloader.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+];
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (FRONTEND_ORIGINS.includes(origin)) return cb(null, true);
+    return cb(null, false);
+  },
+  credentials: true,
+}));
+app.options('*', cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (FRONTEND_ORIGINS.includes(origin)) return cb(null, true);
+    return cb(null, false);
+  },
+  credentials: true,
+}));
 app.use(cookieParser());
 
 // Middleware to verify Stripe webhook signature
@@ -1271,8 +1293,10 @@ app.post('/api/paypal/capture-order', async (req, res) => {
       await pool.query('COMMIT');
       console.log(`PayPal payment for application ${applicationId} recorded.`);
 
-      // Update remaining tickets
-      await updateRemainingTickets(tier);
+      // Update remaining tickets based on purchased tier
+      if (appResult.rows.length > 0) {
+        await updateRemainingTickets(appResult.rows[0].tier);
+      }
 
       // Send confirmation email
        if (appResult.rows.length > 0) {
