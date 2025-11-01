@@ -619,8 +619,8 @@ const initializeDb = async () => {
       {
         key: 'magic_link',
         subject: 'Your secure login link',
-        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p>Click to login: <a href="{{loginUrl}}">Login</a> (valid 15 minutes)</p>\n</div>',
-        text: 'Login: {{loginUrl}} (valid 15 minutes)'
+        html: '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">\n  <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>\n  <p>Hello,</p>\n  <p>We received a request to sign in to Kinkly using this email address on <strong>{{sentAtUtc}}</strong>. If you want to sign in with your <strong>{{email}}</strong> account, click this link:</p>\n  <div style="text-align:center; margin: 24px 0;">\n    <a href="{{loginUrl}}" style="background:#fff; color:#000; padding:12px 20px; border-radius:6px; text-decoration:none; font-weight:bold; display:inline-block;">Sign in to Kinkly</a>\n  </div>\n  <p style="color:#ccc; font-size: 14px;">This link is valid for 15 minutes. If you did not request this link, you can safely ignore this email.</p>\n  <p style="margin-top: 28px;">Thanks,<br/>Your Kinkly team</p>\n</div>',
+        text: 'Hello,\n\nWe received a request to sign in to Kinkly using this email address on {{sentAtUtc}}. If you want to sign in with your {{email}} account, use this link (valid 15 minutes):\n\n{{loginUrl}}\n\nIf you did not request this link, you can safely ignore this email.\n\nThanks,\nYour Kinkly team'
       }
     ];
 
@@ -969,13 +969,20 @@ app.post('/api/auth/request-magic-link', limitMagicLinkIp, requireTurnstile('mag
       redirectUrl || 'https://www.kingcli.eu'
     )}`;
 
-    await sendEmail(
-      email,
-      'Your secure login link',
-      `<p>Click to login: <a href="${loginUrl}">Login</a> (valid 15 minutes)</p>`,
-      `Login: ${loginUrl} (valid 15 minutes)`,
-      `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`
-    );
+    const sentAtUtc = new Date().toUTCString();
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #000; color: #fff; padding: 20px;">
+        <h1 style="color:#fff; text-align:center; margin-bottom: 30px;">Kinkly Berlin</h1>
+        <p>Hello,</p>
+        <p>We received a request to sign in to Kinkly using this email address on <strong>${sentAtUtc}</strong>. If you want to sign in with your <strong>${email}</strong> account, click this link:</p>
+        <div style="text-align:center; margin: 24px 0;">
+          <a href="${loginUrl}" style="background:#fff; color:#000; padding:12px 20px; border-radius:6px; text-decoration:none; font-weight:bold; display:inline-block;">Sign in to Kinkly</a>
+        </div>
+        <p style="color:#ccc; font-size: 14px;">This link is valid for 15 minutes. If you did not request this link, you can safely ignore this email.</p>
+        <p style="margin-top: 28px;">Thanks,<br/>Your Kinkly team</p>
+      </div>`;
+    const text = `Hello,\n\nWe received a request to sign in to Kinkly using this email address on ${sentAtUtc}. If you want to sign in with your ${email} account, use this link (valid 15 minutes):\n\n${loginUrl}\n\nIf you did not request this link, you can safely ignore this email.\n\nThanks,\nYour Kinkly team`;
+    await sendEmail(email, 'Your secure login link', html, text, `Kinkly Berlin <${EMAIL_ADDRESSES.SYSTEM}>`);
     res.json({ success: true });
   } catch (e) {
     console.error('request-magic-link error:', e);
